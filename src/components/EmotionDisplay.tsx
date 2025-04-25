@@ -21,9 +21,8 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading }) =
   if (!emotion) {
     return (
       <div className="w-full p-6 rounded-lg bg-white/5 border border-white/10">
-        <h3 className="text-xl font-medium mb-2 text-nousText-secondary">Emotion Analysis</h3>
-        <p className="text-nousText-muted text-sm">
-          Enter your thoughts above and click analyze to see your emotional state
+        <p className="text-nousText-muted text-lg">
+          Share your thoughts, and I'll listen...
         </p>
       </div>
     );
@@ -45,18 +44,18 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading }) =
           {label}
         </h3>
         <span className="text-sm text-nousText-muted">
-          {confidencePercentage}% confidence
+          {confidencePercentage}% confident
         </span>
       </div>
       
-      <div className="w-full h-2 bg-white/10 rounded-full mb-4">
+      <div className="w-full h-2 bg-white/10 rounded-full mb-6">
         <div 
-          className="h-full rounded-full"
+          className="h-full rounded-full transition-all duration-1000"
           style={{ width: `${confidencePercentage}%`, backgroundColor: color }}
         ></div>
       </div>
       
-      <p className="text-nousText-secondary">{feedback}</p>
+      <p className="text-nousText-secondary text-lg leading-relaxed">{feedback}</p>
     </div>
   );
 };

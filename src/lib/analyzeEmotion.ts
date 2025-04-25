@@ -1,39 +1,27 @@
-
 import { EmotionType } from "../types";
 
-const API_URL = "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english";
+const API_URL = "https://api-inference.huggingface.co/models/j-hartmann/emotion-english-distilroberta-base";
 const API_TOKEN = "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";
 
-// Convert HuggingFace sentiment labels to more specific emotions
-const mapSentimentToEmotion = (sentiment: string, score: number): EmotionType => {
-  if (sentiment === "POSITIVE") {
-    if (score > 0.95) return "joy";
-    return "surprise";
-  } else {
-    if (score > 0.95) return "sadness";
-    if (score > 0.8) return "fear";
-    if (score > 0.6) return "anger";
-    return "neutral";
-  }
-};
-
-// Get feedback based on emotion
-export const getEmotionFeedback = (emotion: EmotionType): string => {
+// Get feedback based on emotion that feels more like a therapist
+export const getEmotionFeedback = (emotion: EmotionType, score: number): string => {
+  const intensity = score > 0.8 ? "strongly " : score > 0.6 ? "quite " : "";
+  
   switch (emotion) {
     case "joy":
-      return "You're feeling positive and uplifted. This is a great time to engage in activities you enjoy.";
-    case "surprise":
-      return "You're experiencing a sense of wonder or unexpected positivity. Being open to new experiences could be rewarding now.";
+      return `I can sense that you're ${intensity}feeling joy. It's wonderful to see you experiencing positive emotions. What's bringing you this happiness?`;
     case "sadness":
-      return "You're processing some difficult feelings. Remember to be gentle with yourself and practice self-care.";
-    case "fear":
-      return "You're experiencing some anxiety or worry. Try some deep breathing and focus on what you can control.";
+      return `I notice that you're ${intensity}feeling sad. It's completely okay to feel this way. Would you like to talk more about what's troubling you?`;
     case "anger":
-      return "You're feeling some frustration. Consider what needs aren't being met and how to address them constructively.";
+      return `I can feel that you're ${intensity}angry. Your feelings are valid. Let's try to understand what's causing this anger and how we can address it.`;
+    case "fear":
+      return `I sense that you're ${intensity}experiencing fear or anxiety. Remember that you're safe here. Can you tell me more about what's causing these feelings?`;
+    case "surprise":
+      return `You seem ${intensity}surprised. Sometimes unexpected things can throw us off balance. Would you like to explore this feeling further?`;
     case "neutral":
-      return "Your emotions are balanced right now. This is a good time for reflection and planning.";
+      return "I sense that you're feeling quite balanced right now. This can be a good time for reflection. What's on your mind?";
     default:
-      return "Take a moment to sit with your feelings and reflect on what they might be telling you.";
+      return "Thank you for sharing. Would you like to tell me more about how you're feeling?";
   }
 };
 
@@ -73,16 +61,20 @@ export const analyzeEmotion = async (text: string) => {
     }
 
     const data = await response.json();
-    const result = Array.isArray(data) ? data[0] : data;
+    const result = data[0];
     
-    // Transform HuggingFace result to our emotion format
-    const emotionType = mapSentimentToEmotion(result[0].label, result[0].score);
+    // Get the emotion with highest score
+    const highestEmotion = result.reduce((prev: any, current: any) => {
+      return (prev.score > current.score) ? prev : current;
+    });
+    
+    const emotionType = highestEmotion.label.toLowerCase() as EmotionType;
     const color = getEmotionColor(emotionType);
-    const feedback = getEmotionFeedback(emotionType);
+    const feedback = getEmotionFeedback(emotionType, highestEmotion.score);
 
     return {
       label: emotionType,
-      score: result[0].score,
+      score: highestEmotion.score,
       color,
       feedback
     };

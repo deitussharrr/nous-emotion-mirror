@@ -19,10 +19,11 @@ const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading }) => 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <textarea
-        className="w-full min-h-[200px] p-4 rounded-lg bg-white/5 border border-white/10 
+        className="w-full min-h-[300px] p-6 rounded-lg bg-white/5 border border-white/10 
                    focus:border-nousPurple focus:ring focus:ring-nousPurple/20 focus:outline-none
-                   resize-none text-nousText-primary placeholder-nousText-muted transition-all"
-        placeholder="How are you feeling today? Share your thoughts here..."
+                   resize-none text-nousText-primary placeholder-nousText-muted transition-all
+                   text-lg leading-relaxed"
+        placeholder="How are you feeling today? Write freely, I'm here to listen..."
         value={text}
         onChange={(e) => setText(e.target.value)}
         required
@@ -30,7 +31,7 @@ const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading }) => 
       
       <button
         type="submit"
-        className="btn-primary w-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+        className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isLoading || text.trim().length === 0}
       >
         {isLoading ? (
@@ -55,10 +56,10 @@ const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading }) => 
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               ></path>
             </svg>
-            Analyzing...
+            Processing...
           </>
         ) : (
-          'Analyze Emotion'
+          'Share Your Feelings'
         )}
       </button>
     </form>

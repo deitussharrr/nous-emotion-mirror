@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
+import { Book, History, ChartLine } from 'lucide-react';
 
 import Logo from '@/components/Logo';
 import JournalInput from '@/components/JournalInput';
 import EmotionDisplay from '@/components/EmotionDisplay';
 import EmotionGraph from '@/components/EmotionGraph';
+import JournalHistory from '@/components/JournalHistory';
 
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
@@ -16,21 +18,19 @@ const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [currentEmotion, setCurrentEmotion] = useState<EmotionResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis'>('journal');
 
   useEffect(() => {
-    // Load entries from localStorage on component mount
     const loadedEntries = getRecentEntries();
     setEntries(loadedEntries);
   }, []);
 
   const handleAnalyzeEmotion = async (text: string) => {
     setIsLoading(true);
-
     try {
       const emotionResult = await analyzeEmotion(text);
       setCurrentEmotion(emotionResult);
       
-      // Create and save new entry
       const newEntry: JournalEntry = {
         id: uuidv4(),
         text,
@@ -39,13 +39,11 @@ const Index: React.FC = () => {
       };
       
       saveEntry(newEntry);
-      
-      // Update entries state to include the new entry
       setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
       
       toast({
-        title: "Analysis complete",
-        description: `Your entry was analyzed as: ${emotionResult.label}`,
+        title: "Entry saved",
+        description: "Your journal entry has been analyzed and saved.",
       });
     } catch (error) {
       console.error("Error analyzing emotion:", error);
@@ -60,41 +58,61 @@ const Index: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-nousBackground text-nousText-primary py-8 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto space-y-12">
+    <div className="min-h-screen bg-nousBackground text-nousText-primary">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
-        <header className="flex justify-between items-center">
+        <header className="flex items-center justify-between">
           <Logo />
-          <p className="text-sm text-nousText-muted">Your AI Emotional Mirror</p>
+          <nav className="flex space-x-2">
+            <button
+              onClick={() => setActiveTab('journal')}
+              className={`p-2 rounded-lg transition-colors ${
+                activeTab === 'journal' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
+              }`}
+            >
+              <Book className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`p-2 rounded-lg transition-colors ${
+                activeTab === 'history' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
+              }`}
+            >
+              <History className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setActiveTab('analysis')}
+              className={`p-2 rounded-lg transition-colors ${
+                activeTab === 'analysis' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
+              }`}
+            >
+              <ChartLine className="w-5 h-5" />
+            </button>
+          </nav>
         </header>
         
         {/* Main content */}
-        <main className="space-y-12">
-          {/* Journal section */}
-          <section className="space-y-6">
-            <h2 className="text-2xl font-semibold text-nousText-secondary">How are you feeling?</h2>
-            <JournalInput onAnalyze={handleAnalyzeEmotion} isLoading={isLoading} />
-          </section>
+        <main className="space-y-6">
+          {activeTab === 'journal' && (
+            <div className="space-y-6">
+              <JournalInput onAnalyze={handleAnalyzeEmotion} isLoading={isLoading} />
+              {currentEmotion && (
+                <EmotionDisplay emotion={currentEmotion} isLoading={isLoading} />
+              )}
+            </div>
+          )}
           
-          {/* Emotion display */}
-          <section className="space-y-6">
-            <h2 className="text-2xl font-semibold text-nousText-secondary">Your Emotional State</h2>
-            <EmotionDisplay emotion={currentEmotion} isLoading={isLoading} />
-          </section>
+          {activeTab === 'history' && (
+            <JournalHistory entries={entries} />
+          )}
           
-          {/* Emotion timeline */}
-          <section className="space-y-6">
-            <h2 className="text-2xl font-semibold text-nousText-secondary">Emotion Timeline</h2>
-            <EmotionGraph entries={entries} />
-          </section>
+          {activeTab === 'analysis' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold text-nousText-secondary">Emotion Timeline</h2>
+              <EmotionGraph entries={entries} />
+            </div>
+          )}
         </main>
-        
-        {/* Footer */}
-        <footer className="pt-8 border-t border-white/10 text-center">
-          <p className="text-sm text-nousText-muted">
-            Nous © {new Date().getFullYear()} | Your emotional data stays in your browser
-          </p>
-        </footer>
       </div>
     </div>
   );

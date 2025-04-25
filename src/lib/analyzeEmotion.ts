@@ -3,10 +3,24 @@ import { EmotionType } from "../types";
 const API_URL = "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-emotion";
 const API_TOKEN = "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";
 
-// Get feedback based on emotion that feels more like a therapist
+type HuggingFaceResponse = {
+  label: string;
+  score: number;
+}[][];
+
+const knownEmotions: EmotionType[] = [
+  "joy",
+  "sadness",
+  "anger",
+  "fear",
+  "surprise",
+  "neutral",
+];
+
+// Therapist-style feedback based on emotion
 export const getEmotionFeedback = (emotion: EmotionType, score: number): string => {
   const intensity = score > 0.8 ? "strongly " : score > 0.6 ? "quite " : "";
-  
+
   switch (emotion) {
     case "joy":
       return `I can sense that you're ${intensity}feeling joy. It's wonderful to see you experiencing positive emotions. What's bringing you this happiness?`;
@@ -25,13 +39,13 @@ export const getEmotionFeedback = (emotion: EmotionType, score: number): string 
   }
 };
 
-// Get color for emotion visualization
+// Color for mood graph
 export const getEmotionColor = (emotion: EmotionType): string => {
   switch (emotion) {
     case "joy":
       return "#FFD43B";
     case "surprise":
-      return "#20C997"; 
+      return "#20C997";
     case "sadness":
       return "#5C7CFA";
     case "fear":
@@ -51,7 +65,7 @@ export const analyzeEmotion = async (text: string) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_TOKEN}`
+        "Authorization": `Bearer ${API_TOKEN}`,
       },
       body: JSON.stringify({ inputs: text }),
     });
@@ -60,15 +74,18 @@ export const analyzeEmotion = async (text: string) => {
       throw new Error(`API request failed with status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: HuggingFaceResponse = await response.json();
     const result = data[0];
-    
-    // Get the emotion with highest score
-    const highestEmotion = result.reduce((prev: any, current: any) => {
-      return (prev.score > current.score) ? prev : current;
-    });
-    
-    const emotionType = highestEmotion.label.toLowerCase() as EmotionType;
+
+    const highestEmotion = result.reduce((prev, curr) =>
+      prev.score > curr.score ? prev : curr
+    );
+
+    const rawLabel = highestEmotion.label.toLowerCase();
+    const emotionType: EmotionType = knownEmotions.includes(rawLabel as EmotionType)
+      ? (rawLabel as EmotionType)
+      : "neutral";
+
     const color = getEmotionColor(emotionType);
     const feedback = getEmotionFeedback(emotionType, highestEmotion.score);
 
@@ -76,7 +93,7 @@ export const analyzeEmotion = async (text: string) => {
       label: emotionType,
       score: highestEmotion.score,
       color,
-      feedback
+      feedback,
     };
   } catch (error) {
     console.error("Error analyzing emotion:", error);

@@ -1,5 +1,5 @@
-
 import { JournalEntry } from "../types";
+import { format } from "date-fns";
 
 const STORAGE_KEY = "nous_journal_entries";
 
@@ -23,9 +23,19 @@ export const getEntries = (): JournalEntry[] => {
   }
 };
 
-export const getRecentEntries = (count: number = 7): JournalEntry[] => {
-  const allEntries = getEntries();
-  return allEntries.slice(0, count);
+export const getEntriesByDay = () => {
+  const entries = getEntries();
+  const entriesByDay: { [key: string]: JournalEntry[] } = {};
+  
+  entries.forEach((entry) => {
+    const day = format(new Date(entry.timestamp), 'yyyy-MM-dd');
+    if (!entriesByDay[day]) {
+      entriesByDay[day] = [];
+    }
+    entriesByDay[day].push(entry);
+  });
+  
+  return entriesByDay;
 };
 
 export const clearEntries = (): void => {

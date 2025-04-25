@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { deleteEntry, exportEntries, importEntries } from '@/lib/localStorage';
+import { deleteEntry, exportEntries, importEntries, getEntriesByDay } from '@/lib/localStorage';
 
 interface JournalHistoryProps {
   entries: JournalEntry[];
@@ -13,6 +13,8 @@ interface JournalHistoryProps {
 }
 
 const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdate }) => {
+  const entriesByDay = getEntriesByDay();
+  
   const handleDelete = (id: string) => {
     deleteEntry(id);
     onEntriesUpdate();
@@ -102,36 +104,46 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
           />
         </div>
       </div>
-      <div className="space-y-4">
-        {entries.map(entry => (
-          <div
-            key={entry.id}
-            className="p-6 rounded-lg bg-white/5 border border-white/10 relative group"
-            style={{ borderLeftColor: entry.emotion.color, borderLeftWidth: '4px' }}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <span className="text-sm text-nousText-muted">
-                {format(new Date(entry.timestamp), 'PPpp')}
-              </span>
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-sm font-medium px-2 py-1 rounded-full" 
-                  style={{ backgroundColor: `${entry.emotion.color}20`, color: entry.emotion.color }}
+      
+      <div className="space-y-8">
+        {Object.entries(entriesByDay).map(([day, dayEntries]) => (
+          <div key={day} className="space-y-4">
+            <h3 className="text-lg font-medium text-nousText-secondary border-b border-white/10 pb-2">
+              {format(new Date(day), 'PPPP')}
+            </h3>
+            <div className="space-y-4">
+              {dayEntries.map(entry => (
+                <div
+                  key={entry.id}
+                  className="p-6 rounded-lg bg-white/5 border border-white/10 relative group"
+                  style={{ borderLeftColor: entry.emotion.color, borderLeftWidth: '4px' }}
                 >
-                  {entry.emotion.label}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => handleDelete(entry.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-sm text-nousText-muted">
+                      {format(new Date(entry.timestamp), 'p')}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="text-sm font-medium px-2 py-1 rounded-full" 
+                        style={{ backgroundColor: `${entry.emotion.color}20`, color: entry.emotion.color }}
+                      >
+                        {entry.emotion.label}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleDelete(entry.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-nousText-primary whitespace-pre-wrap">{entry.text}</p>
+                  <p className="mt-4 text-sm text-nousText-secondary">{entry.emotion.feedback}</p>
+                </div>
+              ))}
             </div>
-            <p className="text-nousText-primary whitespace-pre-wrap">{entry.text}</p>
-            <p className="mt-4 text-sm text-nousText-secondary">{entry.emotion.feedback}</p>
           </div>
         ))}
       </div>

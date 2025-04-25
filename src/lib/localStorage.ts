@@ -35,3 +35,30 @@ export const clearEntries = (): void => {
     console.error("Error clearing journal entries:", error);
   }
 };
+
+export const deleteEntry = (id: string): void => {
+  try {
+    const entries = getEntries();
+    const updatedEntries = entries.filter(entry => entry.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEntries));
+  } catch (error) {
+    console.error("Error deleting journal entry:", error);
+  }
+};
+
+export const exportEntries = (): string => {
+  const entries = getEntries();
+  return JSON.stringify(entries);
+};
+
+export const importEntries = (jsonString: string): boolean => {
+  try {
+    const entries = JSON.parse(jsonString);
+    if (!Array.isArray(entries)) throw new Error('Invalid format');
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    return true;
+  } catch (error) {
+    console.error("Error importing journal entries:", error);
+    return false;
+  }
+};

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
@@ -19,11 +18,6 @@ const Index: React.FC = () => {
   const [currentEmotion, setCurrentEmotion] = useState<EmotionResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis'>('journal');
-
-  useEffect(() => {
-    const loadedEntries = getRecentEntries();
-    setEntries(loadedEntries);
-  }, []);
 
   const handleAnalyzeEmotion = async (text: string) => {
     setIsLoading(true);
@@ -56,11 +50,19 @@ const Index: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const refreshEntries = () => {
+    const loadedEntries = getRecentEntries();
+    setEntries(loadedEntries);
+  };
+  
+  useEffect(() => {
+    refreshEntries();
+  }, []);
   
   return (
     <div className="min-h-screen bg-nousBackground text-nousText-primary">
       <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-        {/* Header */}
         <header className="flex items-center justify-between">
           <Logo />
           <nav className="flex space-x-2">
@@ -91,19 +93,16 @@ const Index: React.FC = () => {
           </nav>
         </header>
         
-        {/* Main content */}
         <main className="space-y-6">
           {activeTab === 'journal' && (
             <div className="space-y-6">
               <JournalInput onAnalyze={handleAnalyzeEmotion} isLoading={isLoading} />
-              {currentEmotion && (
-                <EmotionDisplay emotion={currentEmotion} isLoading={isLoading} />
-              )}
+              <EmotionDisplay emotion={currentEmotion} isLoading={isLoading} />
             </div>
           )}
           
           {activeTab === 'history' && (
-            <JournalHistory entries={entries} />
+            <JournalHistory entries={entries} onEntriesUpdate={refreshEntries} />
           )}
           
           {activeTab === 'analysis' && (

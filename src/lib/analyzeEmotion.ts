@@ -1,6 +1,6 @@
 import { EmotionType } from "../types";
 
-const API_URL = "https://api-inference.huggingface.co/models/j-hartmann/emotion-english-distilroberta-base";
+const API_URL = "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-emotion";
 const API_TOKEN = "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";
 
 // Get feedback based on emotion that feels more like a therapist

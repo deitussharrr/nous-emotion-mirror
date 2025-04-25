@@ -72,3 +72,7 @@ export const importEntries = (jsonString: string): boolean => {
     return false;
   }
 };
+export const getRecentEntries = (count: number): JournalEntry[] => {
+  const all = getEntries();
+  return all.slice(0, count); // adjust if you want oldest or newest
+};

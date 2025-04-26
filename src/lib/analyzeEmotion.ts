@@ -1,3 +1,4 @@
+
 // src/lib/analyzeEmotion.ts
 
 import { EmotionType } from "../types";
@@ -41,6 +42,64 @@ export const getEmotionColor = (emotion: EmotionType): string => {
   }
 };
 
+// Function to analyze text sentiment based on simple keyword matching as fallback
+const analyzeTextLocally = (text: string) => {
+  text = text.toLowerCase();
+  const keywords = {
+    joy: ["happy", "joy", "glad", "excited", "delighted", "wonderful", "great", "good"],
+    sadness: ["sad", "depressed", "unhappy", "miserable", "down", "awful", "terrible", "hurt"],
+    anger: ["angry", "mad", "furious", "annoyed", "upset", "frustrated", "irritated"],
+    fear: ["afraid", "scared", "terrified", "anxious", "worried", "nervous", "fearful"],
+    surprise: ["surprised", "shocked", "amazed", "astonished", "unexpected"],
+    love: ["love", "affection", "care", "adore", "fond"],
+    neutral: ["okay", "fine", "alright", "neutral", "normal"]
+  };
+  
+  // Count keyword matches for each emotion
+  const scores: Record<EmotionType, number> = {
+    joy: 0,
+    sadness: 0,
+    anger: 0,
+    fear: 0,
+    surprise: 0,
+    love: 0,
+    neutral: 0
+  };
+  
+  // Calculate keyword matches
+  Object.entries(keywords).forEach(([emotion, words]) => {
+    words.forEach(word => {
+      if (text.includes(word)) {
+        scores[emotion as EmotionType] += 1;
+      }
+    });
+  });
+  
+  // Find emotion with highest score
+  let topEmotion: EmotionType = "neutral";
+  let highestScore = 0;
+  
+  Object.entries(scores).forEach(([emotion, score]) => {
+    if (score > highestScore) {
+      highestScore = score;
+      topEmotion = emotion as EmotionType;
+    }
+  });
+  
+  // If no emotions detected, use neutral
+  if (highestScore === 0) {
+    topEmotion = "neutral";
+  }
+  
+  // Calculate normalized score (0.5-0.9 range)
+  const normalizedScore = highestScore > 0 ? Math.min(0.5 + (highestScore * 0.1), 0.9) : 0.5;
+  
+  return {
+    label: topEmotion,
+    score: normalizedScore
+  };
+};
+
 export const analyzeEmotion = async (text: string) => {
   try {
     const response = await fetch(API_URL, {
@@ -50,6 +109,8 @@ export const analyzeEmotion = async (text: string) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ inputs: text }),
+      // Add timeout to prevent long waiting
+      signal: AbortSignal.timeout(5000)
     });
 
     if (!response.ok) {
@@ -73,7 +134,16 @@ export const analyzeEmotion = async (text: string) => {
       feedback: getEmotionFeedback(label, score),
     };
   } catch (error) {
-    console.error("Error analyzing emotion:", error);
-    throw error;
+    console.error("Error analyzing emotion, using fallback:", error);
+    
+    // Use local fallback analysis
+    const fallbackResult = analyzeTextLocally(text);
+    
+    return {
+      label: fallbackResult.label,
+      score: fallbackResult.score,
+      color: getEmotionColor(fallbackResult.label),
+      feedback: getEmotionFeedback(fallbackResult.label, fallbackResult.score),
+    };
   }
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
@@ -11,13 +12,38 @@ import JournalHistory from '@/components/JournalHistory';
 
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
-import { JournalEntry, EmotionResult } from '@/types';
+import { JournalEntry, EmotionResult, EmotionType } from '@/types';
 
 const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [currentEmotion, setCurrentEmotion] = useState<EmotionResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis'>('journal');
+
+  // Process entries to get emotion data for the graph
+  const getEmotionData = () => {
+    // Count emotions from entries
+    const emotionCounts: Record<EmotionType, number> = {
+      'joy': 0, 'sadness': 0, 'anger': 0, 
+      'fear': 0, 'surprise': 0, 'love': 0, 'neutral': 0
+    };
+    
+    // Add up the emotion scores
+    entries.forEach(entry => {
+      const emotion = entry.emotion.label as EmotionType;
+      emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
+    });
+    
+    // Convert to array format needed by EmotionGraph
+    const emotionData = Object.entries(emotionCounts)
+      .filter(([_, count]) => count > 0) // Only include emotions with entries
+      .map(([label, count]) => ({
+        label: label as EmotionType,
+        score: count / Math.max(entries.length, 1) // Convert to percentage
+      }));
+    
+    return emotionData;
+  };
 
   const handleAnalyzeEmotion = async (text: string) => {
     setIsLoading(true);
@@ -108,7 +134,7 @@ const Index: React.FC = () => {
           {activeTab === 'analysis' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-nousText-secondary">Emotion Timeline</h2>
-              <EmotionGraph entries={entries} />
+              <EmotionGraph emotionData={getEmotionData()} />
             </div>
           )}
         </main>

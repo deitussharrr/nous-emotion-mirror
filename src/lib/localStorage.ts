@@ -1,3 +1,4 @@
+
 import { JournalEntry } from "../types";
 import { format } from "date-fns";
 
@@ -72,7 +73,8 @@ export const importEntries = (jsonString: string): boolean => {
     return false;
   }
 };
-export const getRecentEntries = (count: number): JournalEntry[] => {
+
+export const getRecentEntries = (count = 7): JournalEntry[] => {
   const all = getEntries();
-  return all.slice(0, count); // adjust if you want oldest or newest
+  return all.slice(0, count); // Return the most recent entries
 };

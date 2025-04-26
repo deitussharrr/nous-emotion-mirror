@@ -13,4 +13,4 @@ export interface EmotionResult {
   feedback: string;
 }
 
-export type EmotionType = 'joy' | 'sadness' | 'anger' | 'fear' | 'surprise' | 'neutral';
+export type EmotionType = 'joy' | 'sadness' | 'anger' | 'fear' | 'surprise' | 'love' | 'neutral';

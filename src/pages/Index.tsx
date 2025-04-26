@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
@@ -22,27 +21,11 @@ const Index: React.FC = () => {
 
   // Process entries to get emotion data for the graph
   const getEmotionData = () => {
-    // Count emotions from entries
-    const emotionCounts: Record<EmotionType, number> = {
-      'joy': 0, 'sadness': 0, 'anger': 0, 
-      'fear': 0, 'surprise': 0, 'love': 0, 'neutral': 0
-    };
-    
-    // Add up the emotion scores
-    entries.forEach(entry => {
-      const emotion = entry.emotion.label as EmotionType;
-      emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
-    });
-    
-    // Convert to array format needed by EmotionGraph
-    const emotionData = Object.entries(emotionCounts)
-      .filter(([_, count]) => count > 0) // Only include emotions with entries
-      .map(([label, count]) => ({
-        label: label as EmotionType,
-        score: count / Math.max(entries.length, 1) // Convert to percentage
-      }));
-    
-    return emotionData;
+    return entries.map(entry => ({
+      timestamp: entry.timestamp,
+      label: entry.emotion.label as EmotionType,
+      score: entry.emotion.score
+    }));
   };
 
   const handleAnalyzeEmotion = async (text: string) => {

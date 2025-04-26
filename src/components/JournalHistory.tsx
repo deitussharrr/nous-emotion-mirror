@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { JournalEntry } from '@/types';
 import { format } from 'date-fns';
@@ -108,9 +107,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
       <div className="space-y-8">
         {Object.entries(entriesByDay).map(([day, dayEntries]) => (
           <div key={day} className="space-y-4">
-            <h3 className="text-lg font-medium text-nousText-secondary border-b border-white/10 pb-2">
-              {format(new Date(day), 'PPPP')}
-            </h3>
+            <DailyEmotions entries={dayEntries} date={day} />
             <div className="space-y-4">
               {dayEntries.map(entry => (
                 <div

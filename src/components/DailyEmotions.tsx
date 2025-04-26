@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { JournalEntry } from '@/types';
+import { JournalEntry, EmotionType } from '@/types';
 import EmotionGraph from './EmotionGraph';
 
 interface DailyEmotionsProps {

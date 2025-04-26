@@ -5,6 +5,7 @@ import { Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { deleteEntry, exportEntries, importEntries, getEntriesByDay } from '@/lib/localStorage';
+import DailyEmotions from '@/components/DailyEmotions';
 
 interface JournalHistoryProps {
   entries: JournalEntry[];

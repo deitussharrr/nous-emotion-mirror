@@ -1,6 +1,6 @@
 
 import React from "react";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { EmotionType } from "../types";
 import { getEmotionColor } from "../lib/analyzeEmotion";
 
@@ -15,7 +15,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     return (
       <div className="p-2 bg-white/10 backdrop-blur-md rounded-md border border-white/20 shadow-lg">
         <p className="capitalize font-medium">{emotion}</p>
-        <p className="text-sm opacity-80">{score}% confidence</p>
+        <p className="text-sm opacity-80">{score}% of entries</p>
       </div>
     );
   }
@@ -23,38 +23,31 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 const EmotionGraph: React.FC<EmotionGraphProps> = ({ emotionData }) => {
-  // Format data for the pie chart
   const chartData = emotionData.map(item => ({
     name: item.label,
     value: item.score,
+    fill: getEmotionColor(item.label),
   }));
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie
-          data={chartData}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={120}
-          innerRadius={60}
-          paddingAngle={2}
-          label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
-          labelLine={false}
-        >
-          {chartData.map((entry, index) => (
-            <Cell 
-              key={`cell-${index}`} 
-              fill={getEmotionColor(entry.name as EmotionType)} 
-              stroke="rgba(255,255,255,0.2)"
-              strokeWidth={1}
-            />
-          ))}
-        </Pie>
+      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+        <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+        <XAxis 
+          dataKey="name" 
+          tick={{ fill: '#CED4DA' }}
+          tickFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
+        />
+        <YAxis 
+          tick={{ fill: '#CED4DA' }}
+          tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
+        />
         <Tooltip content={<CustomTooltip />} />
-      </PieChart>
+        <Bar 
+          dataKey="value"
+          radius={[4, 4, 0, 0]}
+        />
+      </BarChart>
     </ResponsiveContainer>
   );
 };

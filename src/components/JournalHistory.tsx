@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { JournalEntry } from '@/types';
 import { format } from 'date-fns';
-import { Trash2, Download, Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { deleteEntry, exportEntries, importEntries, getEntriesByDay } from '@/lib/localStorage';
@@ -69,7 +70,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
 
   if (!entries.length) {
     return (
-      <div className="text-center p-8">
+      <div className="text-center p-8 rounded-lg bg-white/5 border border-white/10">
         <p className="text-nousText-muted">Start journaling to see your entries here</p>
       </div>
     );
@@ -78,7 +79,12 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-nousText-secondary">Conversation History</h2>
+        <h2 className="text-2xl font-semibold text-nousText-secondary flex items-center gap-2">
+          <span className="bg-nousPurple/20 h-8 w-8 flex items-center justify-center rounded-full">
+            💬
+          </span>
+          Conversation History
+        </h2>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -110,7 +116,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
         {Object.entries(entriesByDay).map(([day, dayEntries]) => (
           <div key={day} className="space-y-4">
             <DailyEmotions entries={dayEntries} date={day} />
-            <div className="space-y-4">
+            <div className="space-y-1">
               {dayEntries.map(entry => (
                 <ConversationSummary key={entry.id} entry={entry} onDelete={handleDelete} />
               ))}

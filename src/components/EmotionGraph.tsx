@@ -2,7 +2,6 @@
 import React from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { EmotionType } from "../types";
-import { getEmotionColor } from "../lib/analyzeEmotion";
 import { format } from "date-fns";
 
 interface EmotionGraphProps {
@@ -12,23 +11,44 @@ interface EmotionGraphProps {
     score: number;
   }[];
   compact?: boolean;
+  dayView?: boolean;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const emotion = payload[0].payload.label;
+    const time = format(new Date(label), 'p');
     const date = format(new Date(label), 'PPP');
+    
     return (
-      <div className="p-2 bg-white/10 backdrop-blur-md rounded-md border border-white/20 shadow-lg">
-        <p className="text-sm text-muted">{date}</p>
-        <p className="capitalize font-medium">{emotion}</p>
+      <div className="p-3 bg-white/10 backdrop-blur-md rounded-md border border-white/20 shadow-lg">
+        <p className="text-sm text-muted-foreground">{date} at {time}</p>
+        <p className="capitalize font-medium flex items-center gap-1">
+          <span>{getEmotionEmoji(emotion)}</span>
+          <span>{emotion}</span>
+          <span className="ml-1 opacity-70">({(payload[0].value * 100).toFixed(0)}%)</span>
+        </p>
       </div>
     );
   }
   return null;
 };
 
-const EmotionGraph: React.FC<EmotionGraphProps> = ({ emotionData, compact = false }) => {
+// Helper function to get emoji based on emotion
+function getEmotionEmoji(emotion: string): string {
+  switch (emotion.toLowerCase()) {
+    case "joy": return "😊";
+    case "sadness": return "😢";
+    case "anger": return "😠";
+    case "fear": return "😨";
+    case "surprise": return "😲";
+    case "love": return "❤️";
+    case "neutral": return "😐";
+    default: return "🤔";
+  }
+}
+
+const EmotionGraph: React.FC<EmotionGraphProps> = ({ emotionData, compact = false, dayView = false }) => {
   const sortedData = [...emotionData].sort((a, b) => 
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
@@ -40,11 +60,17 @@ const EmotionGraph: React.FC<EmotionGraphProps> = ({ emotionData, compact = fals
         <XAxis 
           dataKey="timestamp"
           tick={{ fill: '#CED4DA' }}
-          tickFormatter={(value) => format(new Date(value), 'MMM d')}
+          tickFormatter={(value) => {
+            const date = new Date(value);
+            return dayView ? format(date, 'HH:mm') : format(date, 'MMM d');
+          }}
+          minTickGap={15}
         />
         <YAxis 
           tick={{ fill: '#CED4DA' }}
-          domain={['dataMin', 'dataMax']}
+          domain={[0, 1]}
+          ticks={[0, 0.25, 0.5, 0.75, 1]}
+          tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
         />
         <Tooltip content={<CustomTooltip />} />
         <Line 

@@ -1,4 +1,3 @@
-
 // src/lib/analyzeEmotion.ts
 
 import { EmotionType } from "../types";
@@ -6,26 +5,49 @@ import { EmotionType } from "../types";
 const API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
 const API_TOKEN = "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";
 
-export const getEmotionFeedback = (emotion: EmotionType, score: number): string => {
+export const getEmotionFeedback = (emotion: EmotionType, score: number, useGenZ: boolean = false): string => {
   const intensity = score > 0.8 ? "strongly " : score > 0.6 ? "quite " : "";
-
-  switch (emotion) {
-    case "joy":
-      return `I sense that you're ${intensity}feeling joy. That's wonderful. What's bringing you this happiness?`;
-    case "sadness":
-      return `It seems you're ${intensity}feeling sad. It's okay to feel this way. Want to talk about it?`;
-    case "anger":
-      return `You're ${intensity}angry. Let's explore what's causing this and how we can work through it.`;
-    case "fear":
-      return `You're ${intensity}feeling fear. You're safe here—can you tell me more about what's troubling you?`;
-    case "surprise":
-      return `You're ${intensity}surprised. Sometimes surprises can be overwhelming—want to share more?`;
-    case "love":
-      return `You're ${intensity}feeling love. That's beautiful—would you like to talk about it more?`;
-    case "neutral":
-      return `You're feeling fairly balanced right now. Is there anything on your mind you'd like to explore?`;
-    default:
-      return `Thanks for sharing. Want to dive a little deeper into how you're feeling?`;
+  
+  if (useGenZ) {
+    // Gen Z style responses
+    switch (emotion) {
+      case "joy":
+        return `Yaaaas! You're ${intensity}vibing with joy rn! That's fire. What's got you so hyped?`;
+      case "sadness":
+        return `Ngl, you're ${intensity}in your feels right now. It's totally valid to be in your sad era. Wanna talk about it?`;
+      case "anger":
+        return `You're ${intensity}pressed about something. Valid. Let's unpack what's got you triggered.`;
+      case "fear":
+        return `You're ${intensity}lowkey anxious rn. But it's chill, I'm here for you. What's got you spooked?`;
+      case "surprise":
+        return `That's ${intensity}wild! You're shook. Sometimes unexpected stuff hits different. Tea?`;
+      case "love":
+        return `You're ${intensity}catching feels! We stan that energy. Who's the main character in this story?`;
+      case "neutral":
+        return `You're just chillin' rn. Nothing too extra. Anything on your mind you wanna vibe with?`;
+      default:
+        return `Thanks for the update! No cap, I'm here to listen. Spill?`;
+    }
+  } else {
+    // Regular friendly responses
+    switch (emotion) {
+      case "joy":
+        return `I see you're ${intensity}feeling joy! That's wonderful. What's bringing you this happiness?`;
+      case "sadness":
+        return `I notice you're ${intensity}feeling sad. It's okay to feel down sometimes. Want to talk about what's going on?`;
+      case "anger":
+        return `You seem ${intensity}angry. That's completely valid. Let's explore what's bothering you.`;
+      case "fear":
+        return `I can tell you're ${intensity}feeling anxious or scared. You're safe here—can you share what's on your mind?`;
+      case "surprise":
+        return `You're ${intensity}surprised! Sometimes unexpected things can be a lot to process. Want to talk about it?`;
+      case "love":
+        return `It looks like you're ${intensity}feeling love. That's beautiful—would you like to share more?`;
+      case "neutral":
+        return `You seem pretty balanced right now. How's everything going in your world today?`;
+      default:
+        return `Thanks for sharing. I'm here to listen whenever you need a friend.`;
+    }
   }
 };
 
@@ -100,7 +122,7 @@ const analyzeTextLocally = (text: string) => {
   };
 };
 
-export const analyzeEmotion = async (text: string) => {
+export const analyzeEmotion = async (text: string, useGenZ: boolean = false) => {
   try {
     const response = await fetch(API_URL, {
       method: "POST",
@@ -131,7 +153,7 @@ export const analyzeEmotion = async (text: string) => {
       label,
       score,
       color: getEmotionColor(label),
-      feedback: getEmotionFeedback(label, score),
+      feedback: getEmotionFeedback(label, score, useGenZ),
     };
   } catch (error) {
     console.error("Error analyzing emotion, using fallback:", error);
@@ -143,7 +165,7 @@ export const analyzeEmotion = async (text: string) => {
       label: fallbackResult.label,
       score: fallbackResult.score,
       color: getEmotionColor(fallbackResult.label),
-      feedback: getEmotionFeedback(fallbackResult.label, fallbackResult.score),
+      feedback: getEmotionFeedback(fallbackResult.label, fallbackResult.score, useGenZ),
     };
   }
 };

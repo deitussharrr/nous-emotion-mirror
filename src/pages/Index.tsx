@@ -35,7 +35,9 @@ const Index: React.FC = () => {
   const handleAnalyzeEmotion = async (text: string) => {
     setIsLoading(true);
     try {
-      const emotionResult = await analyzeEmotion(text, useGenZ);
+      // Pass previous emotion for context if available
+      const previousEmotion = currentEmotion?.label;
+      const emotionResult = await analyzeEmotion(text, useGenZ, previousEmotion);
       setCurrentEmotion(emotionResult);
       
       const newEntry: JournalEntry = {
@@ -48,10 +50,13 @@ const Index: React.FC = () => {
       saveEntry(newEntry);
       setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
       
-      toast({
-        title: useGenZ ? "Vibe check complete!" : "Entry saved",
-        description: useGenZ ? "Your feels have been analyzed and saved." : "Your journal entry has been analyzed and saved.",
-      });
+      // Only show toast for first message to avoid notification spam during conversation
+      if (entries.length === 0) {
+        toast({
+          title: useGenZ ? "Vibe check complete!" : "Entry saved",
+          description: useGenZ ? "Your feels have been analyzed and saved." : "Your journal entry has been analyzed and saved.",
+        });
+      }
     } catch (error) {
       console.error("Error analyzing emotion:", error);
       toast({
@@ -95,6 +100,9 @@ const Index: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [useGenZ]);
+  
+  // Get previous emotions for context awareness
+  const previousEmotions = entries.slice(0, 3).map(entry => entry.emotion);
   
   return (
     <div className="min-h-screen bg-nousBackground text-nousText-primary">
@@ -145,8 +153,16 @@ const Index: React.FC = () => {
                 localStorage.setItem('useGenZ', String(value));
               }} />
               
-              <JournalInput onAnalyze={handleAnalyzeEmotion} isLoading={isLoading} />
-              <EmotionDisplay emotion={currentEmotion} isLoading={isLoading} />
+              <JournalInput 
+                onAnalyze={handleAnalyzeEmotion} 
+                isLoading={isLoading}
+                lastEmotion={currentEmotion?.label}
+              />
+              <EmotionDisplay 
+                emotion={currentEmotion} 
+                isLoading={isLoading}
+                previousEmotions={previousEmotions}
+              />
             </div>
           )}
           

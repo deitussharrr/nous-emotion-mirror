@@ -5,9 +5,10 @@ import { EmotionResult } from '../types';
 interface EmotionDisplayProps {
   emotion: EmotionResult | null;
   isLoading: boolean;
+  previousEmotions?: EmotionResult[];
 }
 
-const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading }) => {
+const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, previousEmotions = [] }) => {
   if (isLoading) {
     return (
       <div className="w-full p-4 rounded-lg bg-white/5 border border-white/10 animate-pulse mt-4">
@@ -32,7 +33,9 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading }) =
           </div>
           <div className="flex-1 pt-1">
             <p className="text-nousText-muted">
-              Share your thoughts, and I'll listen...
+              {previousEmotions.length > 0 
+                ? "I'm here if you want to continue our conversation..." 
+                : "Share your thoughts, and I'll listen..."}
             </p>
           </div>
         </div>
@@ -42,6 +45,12 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading }) =
   
   const { label, score, color, feedback } = emotion;
   const emoji = getEmotionEmoji(label);
+  
+  // Check if this is a continued conversation
+  const isContinuedConversation = previousEmotions.length > 0;
+  const hasMoodShift = isContinuedConversation && 
+    previousEmotions[0]?.label !== label &&
+    Math.abs((previousEmotions[0]?.score || 0) - score) > 0.3;
   
   return (
     <div className="w-full p-4 rounded-lg bg-white/5 border border-white/10 mt-4 animate-fade-in">
@@ -56,6 +65,11 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading }) =
           <div className="flex justify-between items-center mb-1">
             <h3 className="text-sm font-medium capitalize" style={{ color }}>
               {label}
+              {hasMoodShift && 
+                <span className="ml-2 text-xs opacity-80">
+                  {score > (previousEmotions[0]?.score || 0) ? "↗️" : "↘️"}
+                </span>
+              }
             </h3>
             <span className="text-xs text-nousText-muted">
               {Math.round(score * 100)}% confident

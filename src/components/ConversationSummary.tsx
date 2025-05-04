@@ -2,7 +2,6 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { JournalEntry } from '@/types';
-import EmotionGraph from '@/components/EmotionGraph';
 import { EmotionType } from '@/types';
 
 interface ConversationSummaryProps {
@@ -11,16 +10,9 @@ interface ConversationSummaryProps {
 }
 
 const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDelete }) => {
-  // Format data for the emotion graph
-  const emotionData = [{
-    timestamp: entry.timestamp,
-    label: entry.emotion.label as EmotionType,
-    score: entry.emotion.score
-  }];
-
   return (
     <div
-      className="p-4 rounded-lg bg-white/5 border border-white/10 mb-3 relative group"
+      className="p-4 rounded-lg bg-white/5 border border-white/10 mb-3 relative group hover:bg-white/10 transition-colors"
       style={{ borderLeftColor: entry.emotion.color, borderLeftWidth: '4px' }}
     >
       <div className="flex justify-between items-start mb-1">
@@ -60,9 +52,23 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
           <p className="whitespace-pre-wrap">{entry.text}</p>
         </div>
         
-        <div className="bg-white/5 rounded-lg p-3 border-l-2" style={{ borderLeftColor: entry.emotion.color }}>
-          <span className="font-medium text-nousText-primary block mb-1">Emotion Mirror</span>
-          <p className="text-nousText-secondary">{entry.emotion.feedback}</p>
+        <div className="text-nousText-secondary">
+          <div className="flex items-center gap-2 mb-1">
+            <div 
+              className="h-6 w-6 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: `${entry.emotion.color}20` }}
+            >
+              <span className="text-sm">🪞</span>
+            </div>
+            <span className="font-medium text-nousText-primary text-sm">Emotion Mirror</span>
+            <span className="text-xs text-nousText-muted">
+              {format(new Date(entry.timestamp), 'p')}
+            </span>
+          </div>
+          
+          <div className="ml-8 bg-white/5 rounded-lg p-3 border-l-2" style={{ borderLeftColor: entry.emotion.color }}>
+            <p className="text-nousText-secondary">{entry.emotion.feedback}</p>
+          </div>
         </div>
       </div>
     </div>

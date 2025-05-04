@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import { Send } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface JournalInputProps {
   onAnalyze: (text: string) => void;
@@ -13,31 +15,47 @@ const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading }) => 
     e.preventDefault();
     if (text.trim().length > 0) {
       onAnalyze(text);
+      setText(''); // Clear input after sending
     }
   };
   
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-4">
-      <textarea
-        className="w-full min-h-[300px] p-6 rounded-lg bg-white/5 border border-white/10 
-                   focus:border-nousPurple focus:ring focus:ring-nousPurple/20 focus:outline-none
-                   resize-none text-nousText-primary placeholder-nousText-muted transition-all
-                   text-lg leading-relaxed"
-        placeholder="How are you feeling today? Write freely, I'm here to listen..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        required
-      />
-      
-      <button
-        type="submit"
-        className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={isLoading || text.trim().length === 0}
-      >
-        {isLoading ? (
-          <>
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="flex gap-2">
+        <div className="flex-1 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden">
+          <textarea
+            className="w-full px-4 py-3 bg-transparent focus:outline-none
+                     text-nousText-primary placeholder-nousText-muted transition-all
+                     text-base leading-relaxed resize-none min-h-[60px] max-h-[150px]"
+            placeholder="Type your message here..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            required
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (text.trim().length > 0) {
+                  handleSubmit(e);
+                }
+              }
+            }}
+            style={{
+              height: 'auto',
+              minHeight: '60px',
+              maxHeight: '150px'
+            }}
+          />
+        </div>
+        <Button
+          type="submit"
+          size="icon"
+          className="rounded-full h-12 w-12 bg-nousPurple hover:bg-nousPurple/80"
+          disabled={isLoading || text.trim().length === 0}
+        >
+          {isLoading ? (
             <svg 
-              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" 
+              className="animate-spin h-5 w-5 text-white" 
               xmlns="http://www.w3.org/2000/svg" 
               fill="none" 
               viewBox="0 0 24 24"
@@ -56,12 +74,11 @@ const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading }) => 
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               ></path>
             </svg>
-            Processing...
-          </>
-        ) : (
-          'Share Your Feelings'
-        )}
-      </button>
+          ) : (
+            <Send className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
     </form>
   );
 };

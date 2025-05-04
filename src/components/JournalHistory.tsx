@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { deleteEntry, exportEntries, importEntries, getEntriesByDay } from '@/lib/localStorage';
 import DailyEmotions from '@/components/DailyEmotions';
+import ConversationSummary from '@/components/ConversationSummary';
 
 interface JournalHistoryProps {
   entries: JournalEntry[];
@@ -77,7 +78,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-nousText-secondary">Journal History</h2>
+        <h2 className="text-2xl font-semibold text-nousText-secondary">Conversation History</h2>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -111,35 +112,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
             <DailyEmotions entries={dayEntries} date={day} />
             <div className="space-y-4">
               {dayEntries.map(entry => (
-                <div
-                  key={entry.id}
-                  className="p-6 rounded-lg bg-white/5 border border-white/10 relative group"
-                  style={{ borderLeftColor: entry.emotion.color, borderLeftWidth: '4px' }}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="text-sm text-nousText-muted">
-                      {format(new Date(entry.timestamp), 'p')}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="text-sm font-medium px-2 py-1 rounded-full" 
-                        style={{ backgroundColor: `${entry.emotion.color}20`, color: entry.emotion.color }}
-                      >
-                        {entry.emotion.label}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleDelete(entry.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-nousText-primary whitespace-pre-wrap">{entry.text}</p>
-                  <p className="mt-4 text-sm text-nousText-secondary">{entry.emotion.feedback}</p>
-                </div>
+                <ConversationSummary key={entry.id} entry={entry} onDelete={handleDelete} />
               ))}
             </div>
           </div>

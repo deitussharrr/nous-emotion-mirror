@@ -32,12 +32,17 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
         </div>
         
         <div className="flex items-center gap-2">
-          <span 
-            className="text-xs font-medium px-2 py-1 rounded-full" 
-            style={{ backgroundColor: `${entry.emotion.color}20`, color: entry.emotion.color }}
-          >
-            {entry.emotion.label}
-          </span>
+          <div className="flex items-center">
+            <span 
+              className="text-xs font-medium px-2 py-1 rounded-full" 
+              style={{ backgroundColor: `${entry.emotion.color}20`, color: entry.emotion.color }}
+            >
+              {entry.emotion.label}
+            </span>
+            <span className="text-xs text-nousText-muted ml-2">
+              {Math.round((entry.emotion.score || 0) * 100)}% confidence
+            </span>
+          </div>
           <button
             className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 p-1"
             onClick={() => onDelete(entry.id)}
@@ -60,7 +65,7 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
             >
               <span className="text-sm">🪞</span>
             </div>
-            <span className="font-medium text-nousText-primary text-sm">Emotion Mirror</span>
+            <span className="font-medium text-nousText-primary text-sm">AI Response</span>
             <span className="text-xs text-nousText-muted">
               {format(new Date(entry.timestamp), 'p')}
             </span>

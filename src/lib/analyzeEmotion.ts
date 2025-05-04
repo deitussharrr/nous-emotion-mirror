@@ -1,9 +1,10 @@
+
 // src/lib/analyzeEmotion.ts
 
 import { EmotionType } from "../types";
 
-const API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
-const API_TOKEN = "hf_aHZswSWTQu4vr4xnSDxMaL";
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
+const EMOTION_API_TOKEN = "hf_aHZswSWTQu4vr4xnSDxMaL";
 
 // Contextual responses based on conversation flow
 export const getEmotionFeedback = (
@@ -175,10 +176,10 @@ const analyzeTextLocally = (text: string) => {
 
 export const analyzeEmotion = async (text: string, useGenZ: boolean = false, previousEmotion?: string) => {
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(EMOTION_API_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_TOKEN}`,
+        "Authorization": `Bearer ${EMOTION_API_TOKEN}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ inputs: text }),
@@ -200,11 +201,13 @@ export const analyzeEmotion = async (text: string, useGenZ: boolean = false, pre
     const label = topEmotion.label.toLowerCase() as EmotionType;
     const score = topEmotion.score;
 
+    // Instead of generating feedback here, we'll just return the emotion data
+    // and let the response generator handle creating the feedback
     return {
       label,
       score,
       color: getEmotionColor(label),
-      feedback: getEmotionFeedback(label, score, useGenZ, previousEmotion),
+      feedback: "", // This will be populated by the response generator
     };
   } catch (error) {
     console.error("Error analyzing emotion, using fallback:", error);
@@ -216,7 +219,7 @@ export const analyzeEmotion = async (text: string, useGenZ: boolean = false, pre
       label: fallbackResult.label,
       score: fallbackResult.score,
       color: getEmotionColor(fallbackResult.label),
-      feedback: getEmotionFeedback(fallbackResult.label, fallbackResult.score, useGenZ, previousEmotion),
+      feedback: "", // This will be populated by the response generator
     };
   }
 };

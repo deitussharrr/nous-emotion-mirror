@@ -13,6 +13,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import CheckInPreferences from '@/components/CheckInPreferences';
 
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
+import { generateResponse } from '@/lib/generateResponse';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
 import { JournalEntry, EmotionResult, EmotionType } from '@/types';
 
@@ -22,6 +23,7 @@ const Index: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'checkins'>('journal');
   const [useGenZ, setUseGenZ] = useState<boolean>(false);
+  const [conversationHistory, setConversationHistory] = useState<{role: string, content: string}[]>([]);
 
   // Process entries to get emotion data for the graph
   const getEmotionData = () => {
@@ -37,14 +39,41 @@ const Index: React.FC = () => {
     try {
       // Pass previous emotion for context if available
       const previousEmotion = currentEmotion?.label;
+      
+      // Step 1: Analyze emotion
       const emotionResult = await analyzeEmotion(text, useGenZ, previousEmotion);
-      setCurrentEmotion(emotionResult);
+      
+      // Step 2: Generate response based on emotion
+      // Update conversation history for better context
+      const updatedHistory = [...conversationHistory, { role: "user", content: text }];
+      
+      const aiResponse = await generateResponse(
+        text, 
+        emotionResult, 
+        useGenZ, 
+        previousEmotion,
+        updatedHistory.slice(-6) // Keep only last 3 exchanges (6 messages) for context
+      );
+      
+      // Update conversation history with this exchange
+      setConversationHistory([
+        ...updatedHistory,
+        { role: "assistant", content: aiResponse }
+      ]);
+      
+      // Update emotion result with the generated response
+      const completeEmotionResult = {
+        ...emotionResult,
+        feedback: aiResponse
+      };
+      
+      setCurrentEmotion(completeEmotionResult);
       
       const newEntry: JournalEntry = {
         id: uuidv4(),
         text,
         timestamp: new Date().toISOString(),
-        emotion: emotionResult,
+        emotion: completeEmotionResult,
       };
       
       saveEntry(newEntry);
@@ -58,7 +87,7 @@ const Index: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error("Error analyzing emotion:", error);
+      console.error("Error processing message:", error);
       toast({
         variant: "destructive",
         title: useGenZ ? "Oof, that didn't work" : "Analysis failed",
@@ -151,6 +180,8 @@ const Index: React.FC = () => {
               <LanguageToggle useGenZ={useGenZ} setUseGenZ={(value) => {
                 setUseGenZ(value);
                 localStorage.setItem('useGenZ', String(value));
+                // Reset conversation history when switching language styles
+                setConversationHistory([]);
               }} />
               
               <JournalInput 

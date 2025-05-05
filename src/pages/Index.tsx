@@ -15,8 +15,7 @@ import CheckInPreferences from '@/components/CheckInPreferences';
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { generateResponse } from '@/lib/generateResponse';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
-import { JournalEntry, EmotionResult, EmotionType, ConversationMessage } from '@/types';
-import { DEFAULT_LLAMA_MODEL } from '@/lib/llamaService';
+import { JournalEntry, EmotionResult, EmotionType } from '@/types';
 
 const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -24,7 +23,7 @@ const Index: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'checkins'>('journal');
   const [useGenZ, setUseGenZ] = useState<boolean>(false);
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<{role: string, content: string}[]>([]);
 
   // Process entries to get emotion data for the graph
   const getEmotionData = () => {
@@ -44,22 +43,9 @@ const Index: React.FC = () => {
       // Step 1: Analyze emotion
       const emotionResult = await analyzeEmotion(text, useGenZ, previousEmotion);
       
-      // Step 2: Generate response based on emotion using Llama-2
+      // Step 2: Generate response based on emotion
       // Update conversation history for better context
-      const updatedHistory: ConversationMessage[] = [
-        ...conversationHistory, 
-        { 
-          role: 'user', 
-          content: text,
-          timestamp: new Date().toISOString()
-        }
-      ];
-      
-      toast({
-        title: useGenZ ? "Processing with Llama-2..." : "Processing your message with Llama-2...",
-        description: useGenZ ? "Hold up, checking your vibe..." : "Analyzing your emotions and generating a response...",
-        duration: 3000,
-      });
+      const updatedHistory = [...conversationHistory, { role: "user", content: text }];
       
       const aiResponse = await generateResponse(
         text, 
@@ -72,11 +58,7 @@ const Index: React.FC = () => {
       // Update conversation history with this exchange
       setConversationHistory([
         ...updatedHistory,
-        { 
-          role: 'assistant', 
-          content: aiResponse,
-          timestamp: new Date().toISOString()
-        }
+        { role: "assistant", content: aiResponse }
       ]);
       
       // Update emotion result with the generated response
@@ -97,11 +79,13 @@ const Index: React.FC = () => {
       saveEntry(newEntry);
       setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
       
-      // Show model info in toast
-      toast({
-        title: useGenZ ? "Vibe check complete!" : "Response generated",
-        description: `Using ${DEFAULT_LLAMA_MODEL}`,
-      });
+      // Only show toast for first message to avoid notification spam during conversation
+      if (entries.length === 0) {
+        toast({
+          title: useGenZ ? "Vibe check complete!" : "Entry saved",
+          description: useGenZ ? "Your feels have been analyzed and saved." : "Your journal entry has been analyzed and saved.",
+        });
+      }
     } catch (error) {
       console.error("Error processing message:", error);
       toast({

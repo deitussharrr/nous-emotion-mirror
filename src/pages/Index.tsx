@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
@@ -15,7 +14,8 @@ import CheckInPreferences from '@/components/CheckInPreferences';
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { generateResponse } from '@/lib/generateResponse';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
-import { JournalEntry, EmotionResult, EmotionType } from '@/types';
+import { JournalEntry, EmotionResult, EmotionType, ConversationMessage } from '@/types';
+import { DEFAULT_LLAMA_MODEL } from '@/lib/llamaService';
 
 const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -43,9 +43,15 @@ const Index: React.FC = () => {
       // Step 1: Analyze emotion
       const emotionResult = await analyzeEmotion(text, useGenZ, previousEmotion);
       
-      // Step 2: Generate response based on emotion
+      // Step 2: Generate response based on emotion using Llama-2
       // Update conversation history for better context
       const updatedHistory = [...conversationHistory, { role: "user", content: text }];
+      
+      toast({
+        title: useGenZ ? "Processing with Llama-2..." : "Processing your message with Llama-2...",
+        description: useGenZ ? "Hold up, checking your vibe..." : "Analyzing your emotions and generating a response...",
+        duration: 3000,
+      });
       
       const aiResponse = await generateResponse(
         text, 
@@ -79,13 +85,11 @@ const Index: React.FC = () => {
       saveEntry(newEntry);
       setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
       
-      // Only show toast for first message to avoid notification spam during conversation
-      if (entries.length === 0) {
-        toast({
-          title: useGenZ ? "Vibe check complete!" : "Entry saved",
-          description: useGenZ ? "Your feels have been analyzed and saved." : "Your journal entry has been analyzed and saved.",
-        });
-      }
+      // Show model info in toast
+      toast({
+        title: useGenZ ? "Vibe check complete!" : "Response generated",
+        description: `Using ${DEFAULT_LLAMA_MODEL}`,
+      });
     } catch (error) {
       console.error("Error processing message:", error);
       toast({

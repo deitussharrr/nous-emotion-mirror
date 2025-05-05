@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { JournalEntry } from '@/types';
 import { format } from 'date-fns';
@@ -7,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { deleteEntry, exportEntries, importEntries, getEntriesByDay } from '@/lib/localStorage';
 import DailyEmotions from '@/components/DailyEmotions';
-import ConversationSummary from '@/components/ConversationSummary';
 
 interface JournalHistoryProps {
   entries: JournalEntry[];
@@ -83,7 +81,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
           <span className="bg-nousPurple/20 h-8 w-8 flex items-center justify-center rounded-full">
             💬
           </span>
-          Conversation History
+          Chat History
         </h2>
         <div className="flex gap-2">
           <Button
@@ -115,12 +113,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
       <div className="space-y-8">
         {Object.entries(entriesByDay).map(([day, dayEntries]) => (
           <div key={day} className="space-y-4">
-            <DailyEmotions entries={dayEntries} date={day} />
-            <div className="space-y-1">
-              {dayEntries.map(entry => (
-                <ConversationSummary key={entry.id} entry={entry} onDelete={handleDelete} />
-              ))}
-            </div>
+            <DailyEmotions entries={dayEntries} date={day} onDelete={handleDelete} />
           </div>
         ))}
       </div>

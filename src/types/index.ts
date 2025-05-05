@@ -20,3 +20,21 @@ export interface ConversationMessage {
   content: string;
   timestamp?: string;
 }
+
+export interface LlamaModelConfig {
+  model: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  stopSequences?: string[];
+}
+
+export interface LlamaResponse {
+  text: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+

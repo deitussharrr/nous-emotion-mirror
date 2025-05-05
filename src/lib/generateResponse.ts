@@ -1,140 +1,110 @@
 
-import { EmotionType, EmotionResult } from "../types";
-
-const RESPONSE_API_URL = "https://api.openai.com/v1/chat/completions";
-// This is just a placeholder API token - in a real app, this should be stored securely
-const RESPONSE_API_TOKEN = ""; 
-
-// Fallback responses when the API fails
-const getFallbackResponse = (
-  emotion: EmotionType,
-  useGenZ: boolean = false,
-  previousEmotion?: string
-): string => {
-  const responseStyle = useGenZ ? "genZ" : "supportive";
-  
-  // Simple fallback responses when API is unavailable
-  if (useGenZ) {
-    // Gen Z style responses
-    switch (emotion) {
-      case "joy":
-        return previousEmotion === "sadness"
-          ? "Yooo, look at this mood glow up! From sad to happy vibes! What changed?"
-          : "You're totally giving happy vibes rn! What's got you so hyped?";
-      
-      case "sadness":
-        return previousEmotion === "joy"
-          ? "Dang, your mood just switched up. Everything good?"
-          : "Seems like you're in your feels. Wanna talk about it?";
-      
-      case "anger":
-        return "You're giving pressed energy. What's got you triggered?";
-      
-      case "fear":
-        return "Getting anxious vibes. No cap, what's stressing you out?";
-      
-      case "surprise":
-        return "That's wild! You're shook, huh?";
-      
-      case "love":
-        return "You're catching feelings! Who's the main character in this story?";
-      
-      case "neutral":
-        return previousEmotion ? "Seems like your vibe's evened out a bit. What's up?" : "Just chillin'? What's on your mind?";
-      
-      default:
-        return "Thanks for the update! No cap, I'm here to listen. Spill?";
-    }
-  } else {
-    // Regular supportive responses
-    switch (emotion) {
-      case "joy":
-        return previousEmotion === "sadness"
-          ? "I notice your mood has brightened! What helped turn things around?"
-          : "I see you're feeling positive! What's bringing you this happiness?";
-      
-      case "sadness":
-        return previousEmotion === "joy"
-          ? "I notice your mood has shifted. Would you like to talk about what changed?"
-          : "It sounds like you might be feeling down. I'm here if you want to talk about it.";
-      
-      case "anger":
-        return "I sense some frustration in your message. Would you like to explore what's bothering you?";
-      
-      case "fear":
-        return "It seems like you might be feeling anxious about something. Would you like to talk about what's concerning you?";
-      
-      case "surprise":
-        return "That sounds unexpected! How are you feeling about this surprise?";
-      
-      case "love":
-        return "Those are warm feelings you're expressing. Would you like to share more about this connection?";
-      
-      case "neutral":
-        return previousEmotion ? "Your mood seems to have balanced out. How are you feeling now?" : "How are things going for you today?";
-      
-      default:
-        return "Thank you for sharing. I'm here to listen whenever you need someone to talk to.";
-    }
-  }
-};
+import { ConversationMessage, EmotionResult, EmotionType } from "@/types";
+import { generateLlamaResponse } from "./llamaService";
 
 export const generateResponse = async (
-  userMessage: string,
+  text: string,
   emotionResult: EmotionResult,
-  useGenZ: boolean = false,
+  useGenZ: boolean,
   previousEmotion?: string,
-  conversationHistory: {role: string, content: string}[] = []
+  conversationHistory: ConversationMessage[] = []
 ): Promise<string> => {
   try {
-    // Skip API call if no token is provided and use fallback response
-    if (!RESPONSE_API_TOKEN) {
-      throw new Error("No API token provided");
-    }
-
-    const style = useGenZ ? "Gen Z style (using slang like 'bestie', 'vibes', 'no cap', etc.)" : "supportive and empathetic";
-    const emotionContext = previousEmotion && previousEmotion !== emotionResult.label 
-      ? `The user's emotion has shifted from ${previousEmotion} to ${emotionResult.label}.` 
-      : `The user is expressing ${emotionResult.label}.`;
+    // Prepare conversation context for the Llama model
+    const hasEmotionShift = previousEmotion && previousEmotion !== emotionResult.label;
     
-    // Build conversation history for context
-    const messages = [
-      {
-        role: "system",
-        content: `You are an emotionally intelligent AI assistant that responds to users in a ${style}. ${emotionContext} Respond to the user in a way that acknowledges their emotional state and encourages further conversation. Keep responses concise (1-3 short sentences).`
-      },
-      ...conversationHistory,
-      {
-        role: "user",
-        content: userMessage
-      }
-    ];
-
-    const response = await fetch(RESPONSE_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESPONSE_API_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo", // Or any other appropriate model
-        messages: messages,
-        max_tokens: 150,
-        temperature: 0.7,
-      }),
-      signal: AbortSignal.timeout(5000)
+    let promptContext = "";
+    if (conversationHistory.length > 0) {
+      promptContext = "Previous conversation:\n";
+      conversationHistory.forEach(msg => {
+        promptContext += `${msg.role === 'user' ? 'User' : 'You'}: ${msg.content}\n`;
+      });
+      promptContext += "\n";
+    }
+    
+    // Craft a prompt for Llama-2
+    let prompt = `${promptContext}The user shared: "${text}"\n\n`;
+    prompt += `Their current emotion is: ${emotionResult.label} (confidence: ${Math.round(emotionResult.score * 100)}%)\n`;
+    
+    if (hasEmotionShift) {
+      prompt += `Note: Their emotion has changed from ${previousEmotion} to ${emotionResult.label}.\n`;
+    }
+    
+    prompt += `Style guide: ${useGenZ ? "Use GenZ slang, be casual and trendy, use emojis." : "Be empathetic, supportive, and professional."}\n\n`;
+    prompt += "Write a brief, compassionate response acknowledging their emotional state and encouraging further discussion:";
+    
+    // Generate response using Llama-2
+    const llamaResponse = await generateLlamaResponse(prompt, {
+      temperature: useGenZ ? 0.8 : 0.7,
+      maxTokens: 256
     });
-
-    if (!response.ok) {
-      throw new Error(`Response API request failed with status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content.trim();
     
+    // Clean up the response
+    let cleanedResponse = llamaResponse
+      .replace("[Response generated using Llama-2-13b model]", "")
+      .trim();
+      
+    return cleanedResponse;
   } catch (error) {
-    console.error("Error generating response, using fallback:", error);
-    // Use fallback response if API fails
-    return getFallbackResponse(emotionResult.label as EmotionType, useGenZ, previousEmotion);
+    console.error("Error generating AI response:", error);
+    
+    // Fallback response generator in case the Llama API fails
+    console.log("Using fallback response generator");
+    let response = "";
+    
+    const emotion = emotionResult.label.toLowerCase() as EmotionType;
+    const intensity = emotionResult.score > 0.8 ? "very " : emotionResult.score > 0.5 ? "" : "somewhat ";
+    
+    if (useGenZ) {
+      // GenZ style responses
+      switch (emotion) {
+        case "joy":
+          response = `Yasss! You're ${intensity}happy rn and that's a total vibe! 🔥 Keep that energy up! Wanna share what's got you so hyped?`;
+          break;
+        case "sadness":
+          response = `Oof, I can tell you're ${intensity}down bad rn. 😔 It's okay to not be okay. Wanna talk about what's making you feel this way?`;
+          break;
+        case "anger":
+          response = `I see you're ${intensity}pressed about something. 😤 That's valid! Let it out - what's got you heated?`;
+          break;
+        case "fear":
+          response = `Ngl, seems like you're ${intensity}stressed. 😰 We all get those anxiety vibes sometimes. What's making you nervous?`;
+          break;
+        case "surprise":
+          response = `Wait, you're ${intensity}shook! 😲 That's wild! What's got you so surprised?`;
+          break;
+        case "love":
+          response = `You're giving major heart eyes energy! 💖 Love to see it! Who's got you feeling all the feels?`;
+          break;
+        default:
+          response = `I'm picking up ${intensity}neutral vibes from you. What's on your mind? I'm all ears!`;
+      }
+    } else {
+      // Professional style responses
+      switch (emotion) {
+        case "joy":
+          response = `I notice you're feeling ${intensity}joyful. It's wonderful to see you in good spirits. Would you like to share what's bringing you happiness?`;
+          break;
+        case "sadness":
+          response = `I sense that you're feeling ${intensity}sad. It's perfectly normal to feel down sometimes. Would you like to talk about what's troubling you?`;
+          break;
+        case "anger":
+          response = `I can see that you're feeling ${intensity}angry. Your feelings are valid, and it's important to acknowledge them. Would you like to discuss what's frustrating you?`;
+          break;
+        case "fear":
+          response = `I notice you're experiencing ${intensity}fear or anxiety. These feelings can be challenging, but recognizing them is a positive step. Would you like to explore what's causing this concern?`;
+          break;
+        case "surprise":
+          response = `You seem ${intensity}surprised. Unexpected events can certainly catch us off guard. Would you like to talk more about what surprised you?`;
+          break;
+        case "love":
+          response = `I can see you're expressing ${intensity}love or affection. These positive connections are important in our lives. Would you like to share more about these feelings?`;
+          break;
+        default:
+          response = `I'm noticing a ${intensity}neutral tone in your message. I'm here to listen if you'd like to explore your thoughts further.`;
+      }
+    }
+    
+    return response;
   }
 };

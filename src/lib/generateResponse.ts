@@ -62,7 +62,7 @@ export const generateResponse = async (
           response = `Yasss! You're ${intensity}happy rn and that's a total vibe! 🔥 Keep that energy up! Wanna share what's got you so hyped?`;
           break;
         case "sadness":
-          response = `Oof, I can tell you're ${intensity}down bad rn. 😔 It's okay to not be okay. Wanna talk about what's making you feel this way?`;
+          response = `Oof, I can tell you're ${intensity}down bad rn. 😔 It's okay to not be okay. Wanna talk about what's going on?`;
           break;
         case "anger":
           response = `I see you're ${intensity}pressed about something. 😤 That's valid! Let it out - what's got you heated?`;

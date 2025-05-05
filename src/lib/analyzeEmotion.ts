@@ -1,10 +1,10 @@
-
 // src/lib/analyzeEmotion.ts
 
 import { EmotionType } from "../types";
 
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
-const EMOTION_API_TOKEN = "hf_aHZswSWTQu4vr4xnSDxMaL";
+// Switching from bert-base-uncased-emotion to distilbert-base-uncased-emotion
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/distilbert-base-uncased-emotion";
+const EMOTION_API_TOKEN = "hf_aHZswSWTQu4vr4xnSDxMaL"; // Using the same token for now
 
 // Contextual responses based on conversation flow
 export const getEmotionFeedback = (
@@ -193,6 +193,11 @@ export const analyzeEmotion = async (text: string, useGenZ: boolean = false, pre
 
     const data = await response.json();
     const result = data[0];
+
+    // Check if the result has the expected format
+    if (!Array.isArray(result)) {
+      throw new Error("Unexpected API response format");
+    }
 
     const topEmotion = result.reduce((prev: any, curr: any) => {
       return prev.score > curr.score ? prev : curr;

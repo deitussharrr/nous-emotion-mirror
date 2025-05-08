@@ -1,9 +1,8 @@
-
 // src/lib/analyzeEmotion.ts
 
 import { EmotionType } from "../types";
 
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/BruthaCool/bert-goemotions-uncased";
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/SamLowe/roberta-base-go_emotions";
 const EMOTION_API_TOKEN = "hf_aHZswSWTQu4vr4xnSDxMaL"; 
 
 // Contextual responses based on conversation flow
@@ -238,55 +237,6 @@ const analyzeTextLocally = (text: string) => {
   };
 };
 
-// Map goemotions to our application's emotion types
-const mapGoEmotionsToAppEmotions = (label: string): EmotionType => {
-  // Mapping from goemotions to our app's emotions
-  const mapping: Record<string, EmotionType> = {
-    // Basic emotions
-    "joy": "joy",
-    "sadness": "sadness",
-    "anger": "anger",
-    "fear": "fear",
-    "surprise": "surprise",
-    "love": "love",
-    
-    // Map to joy
-    "amusement": "joy",
-    "excitement": "joy",
-    "gratitude": "joy",
-    "optimism": "joy",
-    "relief": "joy",
-    "pride": "joy",
-    "admiration": "joy",
-    
-    // Map to sadness
-    "disappointment": "sadness",
-    "grief": "sadness",
-    "remorse": "sadness", 
-    
-    // Map to fear
-    "nervousness": "fear",
-    "embarrassment": "fear",
-    
-    // Map to anger
-    "annoyance": "anger",
-    "disapproval": "anger",
-    "disgust": "anger",
-    
-    // Map to love
-    "caring": "love",
-    "desire": "love",
-    
-    // Default to neutral
-    "realization": "neutral",
-    "confusion": "neutral",
-    "curiosity": "neutral",
-    "approval": "neutral"
-  };
-  
-  return mapping[label.toLowerCase()] || "neutral";
-};
-
 export const analyzeEmotion = async (text: string, useGenZ: boolean = false, previousEmotion?: string) => {
   try {
     const response = await fetch(EMOTION_API_URL, {
@@ -306,7 +256,7 @@ export const analyzeEmotion = async (text: string, useGenZ: boolean = false, pre
 
     const data = await response.json();
     
-    // The BruthaCool/bert-goemotions-uncased model returns emotions with scores
+    // The SamLowe/roberta-base-go_emotions model returns emotions with scores
     if (Array.isArray(data) && data.length > 0) {
       // Get the top emotion from the results
       const topEmotion = data[0].reduce((prev: any, curr: any) => {
@@ -316,8 +266,10 @@ export const analyzeEmotion = async (text: string, useGenZ: boolean = false, pre
       // Use raw emotion label without mapping
       const rawLabel = topEmotion.label;
       
+      console.log("Detected emotion:", rawLabel, "with score:", topEmotion.score);
+      
       return {
-        label: rawLabel,
+        label: rawLabel as EmotionType,
         score: topEmotion.score,
         color: getEmotionColor(rawLabel as EmotionType),
         feedback: "", // This will be populated by the response generator

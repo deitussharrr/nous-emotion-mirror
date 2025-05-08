@@ -5,6 +5,7 @@ import { EmotionType } from "../types";
 
 // Updated with a public model without token requirement
 const EMOTION_API_URL = "https://api-inference.huggingface.co/models/SamLowe/roberta-base-go_emotions";
+const API_KEY = "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";
 
 export const getEmotionColor = (emotion: EmotionType): string => {
   // Extended color palette for raw emotions
@@ -45,7 +46,8 @@ export const analyzeEmotion = async (text: string) => {
   const response = await fetch(EMOTION_API_URL, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${API_KEY}`
     },
     body: JSON.stringify({ inputs: text }),
   });

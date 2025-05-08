@@ -4,7 +4,7 @@
 import { EmotionType } from "../types";
 
 // Updated with a public model without token requirement
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/SamLowe/roberta-base-go_emotions";
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/monologg/bert-base-cased-goemotions-original";
 const API_KEY = "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";
 
 export const getEmotionColor = (emotion: EmotionType): string => {

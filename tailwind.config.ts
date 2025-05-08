@@ -1,13 +1,13 @@
+import type { Config } from "tailwindcss"
 
-import type { Config } from "tailwindcss";
-
-export default {
+const config = {
   darkMode: ["class"],
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
+    "*.{js,ts,jsx,tsx,mdx}",
   ],
   prefix: "",
   theme: {
@@ -25,25 +25,6 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        nousBackground: "#1A1F2C",
-        nousPurple: {
-          DEFAULT: "#7f5af0",
-          light: "#9b87f5",
-          dark: "#6E59A5",
-        },
-        nousText: {
-          primary: "#FFFFFF",
-          secondary: "#E5DEFF",
-          muted: "#8E9196",
-        },
-        emotion: {
-          joy: "#FFD43B",
-          sadness: "#5C7CFA",
-          anger: "#FA5252",
-          fear: "#BE4BDB",
-          surprise: "#20C997",
-          neutral: "#CED4DA",
-        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -87,25 +68,14 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        fadeIn: {
-          "0%": { opacity: "0", transform: "translateY(10px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
-        pulse: {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fadeIn 0.5s ease-out forwards",
-        "pulse-slow": "pulse 3s ease-in-out infinite",
-      },
-      boxShadow: {
-        neus: "0 4px 14px 0 rgba(127, 90, 240, 0.2)",
       },
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+} satisfies Config
+
+export default config

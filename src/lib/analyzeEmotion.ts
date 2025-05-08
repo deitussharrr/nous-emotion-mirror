@@ -1,3 +1,4 @@
+
 // src/lib/analyzeEmotion.ts
 
 import { EmotionType } from "../types";
@@ -103,6 +104,7 @@ export const getEmotionFeedback = (
 };
 
 export const getEmotionColor = (emotion: EmotionType): string => {
+  // Extended color palette for raw emotions
   switch (emotion) {
     case "joy": return "#FFD43B";
     case "sadness": return "#5C7CFA";
@@ -111,6 +113,27 @@ export const getEmotionColor = (emotion: EmotionType): string => {
     case "surprise": return "#20C997";
     case "love": return "#FF8787";
     case "neutral": return "#CED4DA";
+    case "admiration": return "#82B1FF";
+    case "amusement": return "#98FB98";
+    case "annoyance": return "#FF8A65";
+    case "approval": return "#90CAF9";
+    case "caring": return "#FFCC80";
+    case "confusion": return "#B39DDB";
+    case "curiosity": return "#81D4FA";
+    case "desire": return "#F48FB1";
+    case "disappointment": return "#CE93D8";
+    case "disapproval": return "#EF9A9A";
+    case "disgust": return "#A5D6A7";
+    case "embarrassment": return "#FFAB91";
+    case "excitement": return "#FFF59D";
+    case "gratitude": return "#80CBC4";
+    case "grief": return "#90A4AE";
+    case "nervousness": return "#E1BEE7";
+    case "optimism": return "#C5E1A5";
+    case "pride": return "#FFE082";
+    case "realization": return "#80DEEA";
+    case "relief": return "#B2DFDB";
+    case "remorse": return "#BCAAA4";
     default: return "#7f5af0";
   }
 };
@@ -242,20 +265,19 @@ export const analyzeEmotion = async (text: string, useGenZ: boolean = false, pre
     const data = await response.json();
     
     // The BruthaCool/bert-goemotions-uncased model returns emotions with scores
-    // We need to find the top emotion and map it to our application's emotion types
     if (Array.isArray(data) && data.length > 0) {
       // Get the top emotion from the results
       const topEmotion = data[0].reduce((prev: any, curr: any) => {
         return prev.score > curr.score ? prev : curr;
       });
 
-      // Map the goemotions label to our application's emotion types
-      const mappedLabel = mapGoEmotionsToAppEmotions(topEmotion.label);
+      // Use raw emotion label without mapping
+      const rawLabel = topEmotion.label;
       
       return {
-        label: mappedLabel,
+        label: rawLabel,
         score: topEmotion.score,
-        color: getEmotionColor(mappedLabel),
+        color: getEmotionColor(rawLabel as EmotionType),
         feedback: "", // This will be populated by the response generator
       };
     }

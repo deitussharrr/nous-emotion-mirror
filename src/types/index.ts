@@ -13,7 +13,14 @@ export interface EmotionResult {
   feedback: string;
 }
 
-export type EmotionType = 'joy' | 'sadness' | 'anger' | 'fear' | 'surprise' | 'love' | 'neutral';
+// Expanded to include all possible raw emotions from the model
+export type EmotionType = 
+  | 'admiration' | 'amusement' | 'anger' | 'annoyance' | 'approval' 
+  | 'caring' | 'confusion' | 'curiosity' | 'desire' | 'disappointment' 
+  | 'disapproval' | 'disgust' | 'embarrassment' | 'excitement' | 'fear' 
+  | 'gratitude' | 'grief' | 'joy' | 'love' | 'nervousness' | 'optimism' 
+  | 'pride' | 'realization' | 'relief' | 'remorse' | 'sadness' 
+  | 'surprise' | 'neutral';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';

@@ -82,9 +82,10 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
   );
 };
 
-// Helper function to get emoji based on emotion
+// Helper function to get emoji based on emotion (expanded for all raw emotions)
 function getEmotionEmoji(emotion: string): string {
   switch (emotion.toLowerCase()) {
+    // Basic emotions
     case "joy": return "😊";
     case "sadness": return "😢";
     case "anger": return "😠";
@@ -92,6 +93,29 @@ function getEmotionEmoji(emotion: string): string {
     case "surprise": return "😲";
     case "love": return "❤️";
     case "neutral": return "😐";
+    
+    // Extended emotions
+    case "admiration": return "🤩";
+    case "amusement": return "😄";
+    case "annoyance": return "😒";
+    case "approval": return "👍";
+    case "caring": return "🤗";
+    case "confusion": return "🤔";
+    case "curiosity": return "🧐";
+    case "desire": return "😍";
+    case "disappointment": return "😞";
+    case "disapproval": return "👎";
+    case "disgust": return "🤢";
+    case "embarrassment": return "😳";
+    case "excitement": return "🤩";
+    case "gratitude": return "🙏";
+    case "grief": return "💔";
+    case "nervousness": return "😰";
+    case "optimism": return "🌈";
+    case "pride": return "🦚";
+    case "realization": return "💡";
+    case "relief": return "😌";
+    case "remorse": return "😔";
     default: return "🤔";
   }
 }

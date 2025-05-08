@@ -13,9 +13,8 @@ import LanguageToggle from '@/components/LanguageToggle';
 import CheckInPreferences from '@/components/CheckInPreferences';
 
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
-import { generateResponse } from '@/lib/generateResponse';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
-import { JournalEntry, EmotionResult, EmotionType, ConversationMessage } from '@/types';
+import { JournalEntry, EmotionResult, EmotionType } from '@/types';
 
 const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -23,7 +22,6 @@ const Index: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'checkins'>('journal');
   const [useGenZ, setUseGenZ] = useState<boolean>(false);
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
 
   // Process entries to get emotion data for the graph
   const getEmotionData = () => {
@@ -37,74 +35,33 @@ const Index: React.FC = () => {
   const handleAnalyzeEmotion = async (text: string) => {
     setIsLoading(true);
     try {
-      // Pass previous emotion for context if available
-      const previousEmotion = currentEmotion?.label;
+      // Analyze emotion directly from the model
+      const emotionResult = await analyzeEmotion(text);
       
-      // Step 1: Analyze emotion
-      const emotionResult = await analyzeEmotion(text, useGenZ, previousEmotion);
-      
-      // Step 2: Generate response based on emotion
-      // Update conversation history for better context
-      const newUserMessage: ConversationMessage = { 
-        role: "user", 
-        content: text,
-        timestamp: new Date().toISOString()
-      };
-      
-      const updatedHistory = [...conversationHistory, newUserMessage];
-      
-      const aiResponse = await generateResponse(
-        text, 
-        emotionResult, 
-        useGenZ, 
-        previousEmotion,
-        updatedHistory.slice(-6) // Keep only last 3 exchanges (6 messages) for context
-      );
-      
-      // Create new assistant message
-      const newAssistantMessage: ConversationMessage = {
-        role: "assistant",
-        content: aiResponse,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Update conversation history with this exchange
-      setConversationHistory([
-        ...updatedHistory,
-        newAssistantMessage
-      ]);
-      
-      // Update emotion result with the generated response
-      const completeEmotionResult = {
-        ...emotionResult,
-        feedback: aiResponse
-      };
-      
-      setCurrentEmotion(completeEmotionResult);
+      // Save the raw emotion result
+      setCurrentEmotion(emotionResult);
       
       const newEntry: JournalEntry = {
         id: uuidv4(),
         text,
         timestamp: new Date().toISOString(),
-        emotion: completeEmotionResult,
+        emotion: emotionResult,
       };
       
       saveEntry(newEntry);
       setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
       
-      // Only show toast for first message to avoid notification spam during conversation
-      if (entries.length === 0) {
-        toast({
-          title: useGenZ ? "Vibe check complete!" : "Entry saved",
-          description: useGenZ ? "Your feels have been analyzed and saved." : "Your journal entry has been analyzed and saved.",
-        });
-      }
+      toast({
+        title: "Emotion Analysis Complete",
+        description: `Detected: ${emotionResult.label} (${Math.round(emotionResult.score * 100)}%)`,
+      });
+      
     } catch (error) {
-      console.error("Error processing message:", error);
+      console.error("Error analyzing emotion:", error);
       toast({
         variant: "destructive",
-        title: useGenZ ? "Oof, that didn't work" : "Analysis failed",
-        description: useGenZ ? "There was an error checking your vibe. Try again?" : "There was an error analyzing your emotions. Please try again.",
+        title: "Analysis failed",
+        description: "There was an error analyzing your emotions. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -124,24 +81,7 @@ const Index: React.FC = () => {
     if (savedGenZPref) {
       setUseGenZ(savedGenZPref === 'true');
     }
-    
-    // Simulate a notification check-in after 3 seconds for demo purposes
-    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-    if (!hasSeenWelcome) {
-      const timer = setTimeout(() => {
-        toast({
-          title: useGenZ ? "Hey bestie! 👋" : "Welcome to Emotion Mirror",
-          description: useGenZ 
-            ? "Drop your thoughts here and let's check your vibe!" 
-            : "I'm here to listen whenever you want to share how you're feeling.",
-          duration: 5000,
-        });
-        localStorage.setItem('hasSeenWelcome', 'true');
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [useGenZ]);
+  }, []);
   
   // Get previous emotions for context awareness
   const previousEmotions = entries.slice(0, 3).map(entry => entry.emotion);
@@ -193,8 +133,6 @@ const Index: React.FC = () => {
               <LanguageToggle useGenZ={useGenZ} setUseGenZ={(value) => {
                 setUseGenZ(value);
                 localStorage.setItem('useGenZ', String(value));
-                // Reset conversation history when switching language styles
-                setConversationHistory([]);
               }} />
               
               <JournalInput 

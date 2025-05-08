@@ -10,7 +10,8 @@ export interface EmotionResult {
   label: string;
   score: number;
   color: string;
-  feedback: string;
+  feedback?: string;
+  emotions?: Array<{label: string; score: number}>;
 }
 
 // Expanded to include all possible raw emotions from the model

@@ -33,9 +33,7 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
           </div>
           <div className="flex-1 pt-1">
             <p className="text-nousText-muted">
-              {previousEmotions.length > 0 
-                ? "I'm here if you want to continue our conversation..." 
-                : "Share your thoughts, and I'll listen..."}
+              Share your thoughts to see emotion analysis...
             </p>
           </div>
         </div>
@@ -43,14 +41,8 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
     );
   }
   
-  const { label, score, color, feedback } = emotion;
+  const { label, score, color, emotions } = emotion;
   const emoji = getEmotionEmoji(label);
-  
-  // Check if this is a continued conversation
-  const isContinuedConversation = previousEmotions.length > 0;
-  const hasMoodShift = isContinuedConversation && 
-    previousEmotions[0]?.label !== label &&
-    Math.abs((previousEmotions[0]?.score || 0) - score) > 0.3;
   
   return (
     <div className="w-full p-4 rounded-lg bg-white/5 border border-white/10 mt-4 animate-fade-in">
@@ -65,24 +57,34 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
           <div className="flex justify-between items-center mb-1">
             <h3 className="text-sm font-medium capitalize" style={{ color }}>
               {label}
-              {hasMoodShift && 
-                <span className="ml-2 text-xs opacity-80">
-                  {score > (previousEmotions[0]?.score || 0) ? "↗️" : "↘️"}
-                </span>
-              }
             </h3>
             <span className="text-xs text-nousText-muted">
               {Math.round(score * 100)}% confident
             </span>
           </div>
-          <p className="text-nousText-secondary text-sm leading-relaxed">{feedback}</p>
+          {emotions && (
+            <div className="mt-2">
+              <p className="text-xs text-nousText-muted mb-1">All detected emotions:</p>
+              <div className="flex flex-wrap gap-1">
+                {emotions.slice(0, 5).map((emotion: any, index: number) => (
+                  <span 
+                    key={index} 
+                    className="text-xs px-2 py-0.5 rounded-full bg-white/10"
+                    title={`${emotion.label}: ${(emotion.score * 100).toFixed(1)}%`}
+                  >
+                    {emotion.label}: {(emotion.score * 100).toFixed(1)}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// Helper function to get emoji based on emotion (expanded for all raw emotions)
+// Helper function to get emoji based on emotion
 function getEmotionEmoji(emotion: string): string {
   switch (emotion.toLowerCase()) {
     // Basic emotions

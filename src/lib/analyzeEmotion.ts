@@ -148,7 +148,28 @@ const analyzeTextLocally = (text: string) => {
     fear: ["afraid", "scared", "terrified", "anxious", "worried", "nervous", "fearful"],
     surprise: ["surprised", "shocked", "amazed", "astonished", "unexpected"],
     love: ["love", "affection", "care", "adore", "fond"],
-    neutral: ["okay", "fine", "alright", "neutral", "normal"]
+    neutral: ["okay", "fine", "alright", "neutral", "normal"],
+    admiration: ["admire", "respect", "look up to"],
+    amusement: ["amused", "funny", "laughing", "hilarious"],
+    annoyance: ["annoyed", "irritated", "bothered"],
+    approval: ["approve", "agree", "support"],
+    caring: ["care", "concerned", "nurturing"],
+    confusion: ["confused", "puzzled", "perplexed"],
+    curiosity: ["curious", "interested", "intrigued"],
+    desire: ["want", "desire", "crave", "need"],
+    disappointment: ["disappointed", "letdown", "dissatisfied"],
+    disapproval: ["disapprove", "disagree", "reject"],
+    disgust: ["disgusted", "gross", "revolted"],
+    embarrassment: ["embarrassed", "humiliated", "mortified"],
+    excitement: ["excited", "thrilled", "eager"],
+    gratitude: ["grateful", "thankful", "appreciate"],
+    grief: ["grief", "mourning", "loss"],
+    nervousness: ["nervous", "jittery", "on edge"],
+    optimism: ["optimistic", "hopeful", "positive"],
+    pride: ["proud", "accomplished", "satisfied"],
+    realization: ["realized", "understood", "comprehended"],
+    relief: ["relieved", "reassured", "calmed"],
+    remorse: ["sorry", "regret", "remorseful", "apologetic"]
   };
   
   // Count keyword matches for each emotion
@@ -159,7 +180,28 @@ const analyzeTextLocally = (text: string) => {
     fear: 0,
     surprise: 0,
     love: 0,
-    neutral: 0
+    neutral: 0,
+    admiration: 0,
+    amusement: 0,
+    annoyance: 0,
+    approval: 0,
+    caring: 0,
+    confusion: 0,
+    curiosity: 0,
+    desire: 0,
+    disappointment: 0,
+    disapproval: 0,
+    disgust: 0,
+    embarrassment: 0,
+    excitement: 0,
+    gratitude: 0,
+    grief: 0,
+    nervousness: 0,
+    optimism: 0,
+    pride: 0,
+    realization: 0,
+    relief: 0,
+    remorse: 0
   };
   
   // Calculate keyword matches

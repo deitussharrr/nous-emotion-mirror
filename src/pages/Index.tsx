@@ -15,7 +15,7 @@ import CheckInPreferences from '@/components/CheckInPreferences';
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { generateResponse } from '@/lib/generateResponse';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
-import { JournalEntry, EmotionResult, EmotionType } from '@/types';
+import { JournalEntry, EmotionResult, EmotionType, ConversationMessage } from '@/types';
 
 const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -23,7 +23,7 @@ const Index: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'checkins'>('journal');
   const [useGenZ, setUseGenZ] = useState<boolean>(false);
-  const [conversationHistory, setConversationHistory] = useState<{role: string, content: string}[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
 
   // Process entries to get emotion data for the graph
   const getEmotionData = () => {
@@ -45,7 +45,13 @@ const Index: React.FC = () => {
       
       // Step 2: Generate response based on emotion
       // Update conversation history for better context
-      const updatedHistory = [...conversationHistory, { role: "user", content: text }];
+      const newUserMessage: ConversationMessage = { 
+        role: "user", 
+        content: text,
+        timestamp: new Date().toISOString()
+      };
+      
+      const updatedHistory = [...conversationHistory, newUserMessage];
       
       const aiResponse = await generateResponse(
         text, 
@@ -55,10 +61,17 @@ const Index: React.FC = () => {
         updatedHistory.slice(-6) // Keep only last 3 exchanges (6 messages) for context
       );
       
+      // Create new assistant message
+      const newAssistantMessage: ConversationMessage = {
+        role: "assistant",
+        content: aiResponse,
+        timestamp: new Date().toISOString()
+      };
+      
       // Update conversation history with this exchange
       setConversationHistory([
         ...updatedHistory,
-        { role: "assistant", content: aiResponse }
+        newAssistantMessage
       ]);
       
       // Update emotion result with the generated response

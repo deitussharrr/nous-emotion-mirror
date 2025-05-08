@@ -1,5 +1,5 @@
 
-import { EmotionType, EmotionResult } from "../types";
+import { EmotionType, EmotionResult, ConversationMessage } from "../types";
 
 const RESPONSE_API_URL = "https://api.openai.com/v1/chat/completions";
 // This is just a placeholder API token - in a real app, this should be stored securely
@@ -84,7 +84,7 @@ export const generateResponse = async (
   emotionResult: EmotionResult,
   useGenZ: boolean = false,
   previousEmotion?: string,
-  conversationHistory: {role: string, content: string}[] = []
+  conversationHistory: ConversationMessage[] = []
 ): Promise<string> => {
   try {
     // Skip API call if no token is provided and use fallback response
@@ -103,7 +103,10 @@ export const generateResponse = async (
         role: "system",
         content: `You are an emotionally intelligent AI assistant that responds to users in a ${style}. ${emotionContext} Respond to the user in a way that acknowledges their emotional state and encourages further conversation. Keep responses concise (1-3 short sentences).`
       },
-      ...conversationHistory,
+      ...conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
       {
         role: "user",
         content: userMessage

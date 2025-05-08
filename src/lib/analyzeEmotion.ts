@@ -1,10 +1,9 @@
-
 // src/lib/analyzeEmotion.ts
 
 import { EmotionType } from "../types";
 
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
-const EMOTION_API_TOKEN = "hf_aHZswSWTQu4vr4xnSDxMaL";
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/BruthaCool/bert-goemotions-uncased";
+const EMOTION_API_TOKEN = "hf_aHZswSWTQu4vr4xnSDxMaL"; 
 
 // Contextual responses based on conversation flow
 export const getEmotionFeedback = (
@@ -174,6 +173,55 @@ const analyzeTextLocally = (text: string) => {
   };
 };
 
+// Map goemotions to our application's emotion types
+const mapGoEmotionsToAppEmotions = (label: string): EmotionType => {
+  // Mapping from goemotions to our app's emotions
+  const mapping: Record<string, EmotionType> = {
+    // Basic emotions
+    "joy": "joy",
+    "sadness": "sadness",
+    "anger": "anger",
+    "fear": "fear",
+    "surprise": "surprise",
+    "love": "love",
+    
+    // Map to joy
+    "amusement": "joy",
+    "excitement": "joy",
+    "gratitude": "joy",
+    "optimism": "joy",
+    "relief": "joy",
+    "pride": "joy",
+    "admiration": "joy",
+    
+    // Map to sadness
+    "disappointment": "sadness",
+    "grief": "sadness",
+    "remorse": "sadness", 
+    
+    // Map to fear
+    "nervousness": "fear",
+    "embarrassment": "fear",
+    
+    // Map to anger
+    "annoyance": "anger",
+    "disapproval": "anger",
+    "disgust": "anger",
+    
+    // Map to love
+    "caring": "love",
+    "desire": "love",
+    
+    // Default to neutral
+    "realization": "neutral",
+    "confusion": "neutral",
+    "curiosity": "neutral",
+    "approval": "neutral"
+  };
+  
+  return mapping[label.toLowerCase()] || "neutral";
+};
+
 export const analyzeEmotion = async (text: string, useGenZ: boolean = false, previousEmotion?: string) => {
   try {
     const response = await fetch(EMOTION_API_URL, {
@@ -192,23 +240,27 @@ export const analyzeEmotion = async (text: string, useGenZ: boolean = false, pre
     }
 
     const data = await response.json();
-    const result = data[0];
+    
+    // The BruthaCool/bert-goemotions-uncased model returns emotions with scores
+    // We need to find the top emotion and map it to our application's emotion types
+    if (Array.isArray(data) && data.length > 0) {
+      // Get the top emotion from the results
+      const topEmotion = data[0].reduce((prev: any, curr: any) => {
+        return prev.score > curr.score ? prev : curr;
+      });
 
-    const topEmotion = result.reduce((prev: any, curr: any) => {
-      return prev.score > curr.score ? prev : curr;
-    });
-
-    const label = topEmotion.label.toLowerCase() as EmotionType;
-    const score = topEmotion.score;
-
-    // Instead of generating feedback here, we'll just return the emotion data
-    // and let the response generator handle creating the feedback
-    return {
-      label,
-      score,
-      color: getEmotionColor(label),
-      feedback: "", // This will be populated by the response generator
-    };
+      // Map the goemotions label to our application's emotion types
+      const mappedLabel = mapGoEmotionsToAppEmotions(topEmotion.label);
+      
+      return {
+        label: mappedLabel,
+        score: topEmotion.score,
+        color: getEmotionColor(mappedLabel),
+        feedback: "", // This will be populated by the response generator
+      };
+    }
+    
+    throw new Error("Invalid response format from emotion API");
   } catch (error) {
     console.error("Error analyzing emotion, using fallback:", error);
     

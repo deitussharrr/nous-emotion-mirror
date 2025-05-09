@@ -32,8 +32,9 @@ const JournalInput: React.FC<JournalInputProps> = ({
     }
   }, [text]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
     if (text.trim().length > 0) {
       // Create a new message
       const newMessage: ConversationMessage = {
@@ -45,13 +46,19 @@ const JournalInput: React.FC<JournalInputProps> = ({
       // Combine existing messages with new message
       const updatedMessages = [...existingMessages, newMessage];
       
-      // Combine all message content for analysis
-      const fullText = updatedMessages.map(msg => msg.content).join('\n');
-      
-      onAnalyze(fullText, title || undefined, updatedMessages);
+      onAnalyze(text, title || undefined, updatedMessages);
       setText(''); // Clear input after sending
       // Don't clear title if we're adding to an existing note
     }
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Prevent default to avoid newline
+      handleSubmit();
+    }
+    // Shift+Enter will naturally create a new line as we don't prevent default
   };
   
   // Get placeholder based on conversation context
@@ -118,6 +125,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
             placeholder={getPlaceholder()}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
             required
             rows={3}
           />

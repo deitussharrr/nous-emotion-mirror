@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
@@ -27,7 +26,7 @@ const Index: React.FC = () => {
   const [activeNoteMessages, setActiveNoteMessages] = useState<ConversationMessage[]>([]);
   const [activeNoteTitle, setActiveNoteTitle] = useState<string>('');
 
-  // Process entries to get emotion data for the graph - now from messages
+  // Process entries to get emotion data for the graph - ONLY from messages
   const getEmotionData = () => {
     const allMessageEmotions: {
       timestamp: string;
@@ -37,15 +36,7 @@ const Index: React.FC = () => {
     }[] = [];
     
     entries.forEach(entry => {
-      // Add the entry's main emotion
-      allMessageEmotions.push({
-        timestamp: entry.timestamp,
-        label: entry.emotion.label as EmotionType,
-        score: entry.emotion.score,
-        messageContent: entry.text.slice(0, 50) + (entry.text.length > 50 ? '...' : '')
-      });
-      
-      // Add emotions from individual messages if they exist
+      // Only add emotions from individual messages
       if (entry.messages && entry.messages.length > 0) {
         entry.messages.forEach(message => {
           if (message.emotion) {
@@ -72,7 +63,7 @@ const Index: React.FC = () => {
       // Save the raw emotion result
       setCurrentEmotion(emotionResult);
       
-      // Ensure messages have emotions and timestamps
+      // Process messages - ensure the latest message has the emotion analysis
       const processedMessages = messages?.map((msg, idx) => {
         // For this example, we'll use the same emotion result for all messages
         // In a real app, you'd analyze each message separately
@@ -94,9 +85,9 @@ const Index: React.FC = () => {
           if (entry.id === activeNoteId) {
             return {
               ...entry,
-              text: text,
+              text: text, // Keep this for backward compatibility
               timestamp: new Date().toISOString(), // Update timestamp
-              emotion: emotionResult,
+              emotion: emotionResult, // Keep this for backward compatibility
               messages: processedMessages
             };
           }
@@ -118,9 +109,9 @@ const Index: React.FC = () => {
         const newEntry: JournalEntry = {
           id: uuidv4(),
           title,
-          text,
+          text: text, // Keep this for backward compatibility
           timestamp: new Date().toISOString(),
-          emotion: emotionResult,
+          emotion: emotionResult, // Keep this for backward compatibility
           messages: processedMessages
         };
         
@@ -291,7 +282,7 @@ const Index: React.FC = () => {
           {activeTab === 'analysis' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-nousText-secondary">Emotion Timeline</h2>
-              <p className="text-sm text-nousText-muted">Tracking emotions across all messages and notes</p>
+              <p className="text-sm text-nousText-muted">Tracking emotions across all messages</p>
               <EmotionGraph emotionData={getEmotionData()} />
             </div>
           )}

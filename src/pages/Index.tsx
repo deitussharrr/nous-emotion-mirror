@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
-import { Book, History, ChartLine, Bell } from 'lucide-react';
+import { Book, History, ChartLine, Bell, Search } from 'lucide-react';
 
 import Logo from '@/components/Logo';
 import JournalInput from '@/components/JournalInput';
@@ -11,6 +11,7 @@ import EmotionGraph from '@/components/EmotionGraph';
 import JournalHistory from '@/components/JournalHistory';
 import LanguageToggle from '@/components/LanguageToggle';
 import CheckInPreferences from '@/components/CheckInPreferences';
+import NoteSearch from '@/components/NoteSearch';
 
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
@@ -20,7 +21,7 @@ const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [currentEmotion, setCurrentEmotion] = useState<EmotionResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'checkins'>('journal');
+  const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'search' | 'checkins'>('journal');
   const [useGenZ, setUseGenZ] = useState<boolean>(false);
 
   // Process entries to get emotion data for the graph
@@ -32,7 +33,7 @@ const Index: React.FC = () => {
     }));
   };
 
-  const handleAnalyzeEmotion = async (text: string) => {
+  const handleAnalyzeEmotion = async (text: string, title?: string) => {
     setIsLoading(true);
     try {
       // Analyze emotion directly from the model
@@ -43,6 +44,7 @@ const Index: React.FC = () => {
       
       const newEntry: JournalEntry = {
         id: uuidv4(),
+        title,
         text,
         timestamp: new Date().toISOString(),
         emotion: emotionResult,
@@ -52,8 +54,8 @@ const Index: React.FC = () => {
       setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
       
       toast({
-        title: "Emotion Analysis Complete",
-        description: `Detected: ${emotionResult.label} (${Math.round(emotionResult.score * 100)}%)`,
+        title: "Note saved",
+        description: `Detected mood: ${emotionResult.label} (${Math.round(emotionResult.score * 100)}%)`,
       });
       
     } catch (error) {
@@ -97,6 +99,7 @@ const Index: React.FC = () => {
               className={`p-2 rounded-lg transition-colors ${
                 activeTab === 'journal' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
               }`}
+              title="New Note"
             >
               <Book className="w-5 h-5" />
             </button>
@@ -105,14 +108,25 @@ const Index: React.FC = () => {
               className={`p-2 rounded-lg transition-colors ${
                 activeTab === 'history' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
               }`}
+              title="My Notes"
             >
               <History className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setActiveTab('search')}
+              className={`p-2 rounded-lg transition-colors ${
+                activeTab === 'search' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
+              }`}
+              title="Search Notes"
+            >
+              <Search className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('analysis')}
               className={`p-2 rounded-lg transition-colors ${
                 activeTab === 'analysis' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
               }`}
+              title="Mood Analysis"
             >
               <ChartLine className="w-5 h-5" />
             </button>
@@ -121,6 +135,7 @@ const Index: React.FC = () => {
               className={`p-2 rounded-lg transition-colors ${
                 activeTab === 'checkins' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
               }`}
+              title="Settings"
             >
               <Bell className="w-5 h-5" />
             </button>
@@ -150,6 +165,10 @@ const Index: React.FC = () => {
           
           {activeTab === 'history' && (
             <JournalHistory entries={entries} onEntriesUpdate={refreshEntries} />
+          )}
+          
+          {activeTab === 'search' && (
+            <NoteSearch entries={entries} />
           )}
           
           {activeTab === 'analysis' && (

@@ -21,8 +21,8 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
     deleteEntry(id);
     onEntriesUpdate();
     toast({
-      title: "Entry deleted",
-      description: "Your journal entry has been removed.",
+      title: "Note deleted",
+      description: "Your note has been removed.",
     });
   };
 
@@ -32,15 +32,15 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `nous-journal-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    a.download = `mood-notes-${format(new Date(), 'yyyy-MM-dd')}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
     toast({
-      title: "Journal exported",
-      description: "Your journal entries have been downloaded.",
+      title: "Notes exported",
+      description: "Your notes have been downloaded.",
     });
   };
 
@@ -54,14 +54,14 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
       if (importEntries(content)) {
         onEntriesUpdate();
         toast({
-          title: "Journal imported",
-          description: "Your journal entries have been restored.",
+          title: "Notes imported",
+          description: "Your notes have been restored.",
         });
       } else {
         toast({
           variant: "destructive",
           title: "Import failed",
-          description: "There was an error importing your journal entries.",
+          description: "There was an error importing your notes.",
         });
       }
     };
@@ -71,7 +71,7 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
   if (!entries.length) {
     return (
       <div className="text-center p-8 rounded-lg bg-white/5 border border-white/10">
-        <p className="text-nousText-muted">Start journaling to see your entries here</p>
+        <p className="text-nousText-muted">Start writing notes to see your entries here</p>
       </div>
     );
   }
@@ -81,23 +81,23 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold text-nousText-secondary flex items-center gap-2">
           <span className="bg-nousPurple/20 h-8 w-8 flex items-center justify-center rounded-full">
-            💬
+            📝
           </span>
-          Conversation History
+          My Notes
         </h2>
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="icon"
             onClick={handleExport}
-            title="Export journal"
+            title="Export notes"
           >
             <Download className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            title="Import journal"
+            title="Import notes"
             onClick={() => document.getElementById('import-file')?.click()}
           >
             <Upload className="h-4 w-4" />

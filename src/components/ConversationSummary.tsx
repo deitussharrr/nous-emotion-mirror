@@ -15,7 +15,7 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
       className="p-4 rounded-lg bg-white/5 border border-white/10 mb-3 relative group hover:bg-white/10 transition-colors"
       style={{ borderLeftColor: entry.emotion.color, borderLeftWidth: '4px' }}
     >
-      <div className="flex justify-between items-start mb-1">
+      <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2">
           <div 
             className="h-8 w-8 rounded-full flex items-center justify-center"
@@ -23,9 +23,11 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
           >
             <span>{getEmotionEmoji(entry.emotion.label)}</span>
           </div>
-          <div>
-            <span className="font-medium text-nousText-primary">You</span>
-            <span className="text-xs text-nousText-muted ml-2">
+          <div className="flex-1">
+            <h3 className="font-medium text-nousText-primary text-lg">
+              {entry.title || `Note from ${format(new Date(entry.timestamp), 'MMM d, yyyy')}`}
+            </h3>
+            <span className="text-xs text-nousText-muted">
               {format(new Date(entry.timestamp), 'p')}
             </span>
           </div>
@@ -39,9 +41,6 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
             >
               {entry.emotion.label}
             </span>
-            <span className="text-xs text-nousText-muted ml-2">
-              {Math.round((entry.emotion.score || 0) * 100)}% confidence
-            </span>
           </div>
           <button
             className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 p-1"
@@ -52,28 +51,21 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
         </div>
       </div>
       
-      <div className="ml-10 space-y-3">
+      <div className="space-y-3 pl-10">
         <div className="text-nousText-secondary bg-white/5 rounded-lg p-3">
           <p className="whitespace-pre-wrap">{entry.text}</p>
         </div>
         
-        <div className="text-nousText-secondary">
-          <div className="flex items-center gap-2 mb-1">
-            <div 
-              className="h-6 w-6 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: `${entry.emotion.color}20` }}
+        <div className="flex flex-wrap gap-1 mt-2">
+          {entry.emotion.emotions?.slice(0, 3).map((emotion: any, index: number) => (
+            <span 
+              key={index} 
+              className="text-xs px-2 py-0.5 rounded-full bg-white/10"
+              title={`${emotion.label}: ${(emotion.score * 100).toFixed(1)}%`}
             >
-              <span className="text-sm">🪞</span>
-            </div>
-            <span className="font-medium text-nousText-primary text-sm">AI Response</span>
-            <span className="text-xs text-nousText-muted">
-              {format(new Date(entry.timestamp), 'p')}
+              {emotion.label}: {(emotion.score * 100).toFixed(0)}%
             </span>
-          </div>
-          
-          <div className="ml-8 bg-white/5 rounded-lg p-3 border-l-2" style={{ borderLeftColor: entry.emotion.color }}>
-            <p className="text-nousText-secondary">{entry.emotion.feedback}</p>
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -90,6 +82,27 @@ function getEmotionEmoji(emotion: string): string {
     case "surprise": return "😲";
     case "love": return "❤️";
     case "neutral": return "😐";
+    case "admiration": return "🤩";
+    case "amusement": return "😄";
+    case "annoyance": return "😒";
+    case "approval": return "👍";
+    case "caring": return "🤗";
+    case "confusion": return "🤔";
+    case "curiosity": return "🧐";
+    case "desire": return "😍";
+    case "disappointment": return "😞";
+    case "disapproval": return "👎";
+    case "disgust": return "🤢";
+    case "embarrassment": return "😳";
+    case "excitement": return "🤩";
+    case "gratitude": return "🙏";
+    case "grief": return "💔";
+    case "nervousness": return "😰";
+    case "optimism": return "🌈";
+    case "pride": return "🦚";
+    case "realization": return "💡";
+    case "relief": return "😌";
+    case "remorse": return "😔";
     default: return "🤔";
   }
 }

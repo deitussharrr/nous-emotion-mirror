@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { JournalEntry } from '@/types';
 import { EmotionType } from '@/types';
 import { ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import NoteEmotionGraph from '@/components/NoteEmotionGraph';
 
 interface ConversationSummaryProps {
   entry: JournalEntry;
@@ -112,16 +113,22 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
           </div>
         )}
         
-        <div className="flex flex-wrap gap-1 mt-2">
-          {entry.emotion.emotions?.slice(0, 3).map((emotion: any, index: number) => (
-            <span 
-              key={index} 
-              className="text-xs px-2 py-0.5 rounded-full bg-white/10"
-              title={`${emotion.label}: ${(emotion.score * 100).toFixed(1)}%`}
-            >
-              {emotion.label}: {(emotion.score * 100).toFixed(0)}%
-            </span>
-          ))}
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1">
+            {entry.emotion.emotions?.slice(0, 3).map((emotion: any, index: number) => (
+              <span 
+                key={index} 
+                className="text-xs px-2 py-0.5 rounded-full bg-white/10"
+                title={`${emotion.label}: ${(emotion.score * 100).toFixed(1)}%`}
+              >
+                {emotion.label}: {(emotion.score * 100).toFixed(0)}%
+              </span>
+            ))}
+          </div>
+          
+          {expanded && entry.messages && entry.messages.length > 0 && (
+            <NoteEmotionGraph messages={entry.messages} />
+          )}
         </div>
       </div>
     </div>

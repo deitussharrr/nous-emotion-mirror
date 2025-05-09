@@ -29,4 +29,5 @@ export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: string;
+  emotion?: EmotionResult; // Add emotion to track per message
 }

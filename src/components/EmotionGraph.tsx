@@ -9,6 +9,7 @@ interface EmotionGraphProps {
     timestamp: string;
     label: EmotionType;
     score: number;
+    messageContent?: string;
   }[];
   compact?: boolean;
   dayView?: boolean;
@@ -19,15 +20,19 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const emotion = payload[0].payload.label;
     const time = format(new Date(label), 'p');
     const date = format(new Date(label), 'PPP');
+    const messageContent = payload[0].payload.messageContent;
     
     return (
-      <div className="p-3 bg-white/10 backdrop-blur-md rounded-md border border-white/20 shadow-lg">
+      <div className="p-3 bg-white/10 backdrop-blur-md rounded-md border border-white/20 shadow-lg max-w-xs">
         <p className="text-sm text-muted-foreground">{date} at {time}</p>
         <p className="capitalize font-medium flex items-center gap-1">
           <span>{getEmotionEmoji(emotion)}</span>
           <span>{emotion}</span>
           <span className="ml-1 opacity-70">({(payload[0].value * 100).toFixed(0)}%)</span>
         </p>
+        {messageContent && (
+          <p className="text-xs mt-1 line-clamp-2 text-muted-foreground">{messageContent}</p>
+        )}
       </div>
     );
   }

@@ -27,13 +27,40 @@ const Index: React.FC = () => {
   const [activeNoteMessages, setActiveNoteMessages] = useState<ConversationMessage[]>([]);
   const [activeNoteTitle, setActiveNoteTitle] = useState<string>('');
 
-  // Process entries to get emotion data for the graph
+  // Process entries to get emotion data for the graph - now from messages
   const getEmotionData = () => {
-    return entries.map(entry => ({
-      timestamp: entry.timestamp,
-      label: entry.emotion.label as EmotionType,
-      score: entry.emotion.score
-    }));
+    const allMessageEmotions: {
+      timestamp: string;
+      label: EmotionType;
+      score: number;
+      messageContent?: string;
+    }[] = [];
+    
+    entries.forEach(entry => {
+      // Add the entry's main emotion
+      allMessageEmotions.push({
+        timestamp: entry.timestamp,
+        label: entry.emotion.label as EmotionType,
+        score: entry.emotion.score,
+        messageContent: entry.text.slice(0, 50) + (entry.text.length > 50 ? '...' : '')
+      });
+      
+      // Add emotions from individual messages if they exist
+      if (entry.messages && entry.messages.length > 0) {
+        entry.messages.forEach(message => {
+          if (message.emotion) {
+            allMessageEmotions.push({
+              timestamp: message.timestamp || entry.timestamp,
+              label: message.emotion.label as EmotionType,
+              score: message.emotion.score,
+              messageContent: message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '')
+            });
+          }
+        });
+      }
+    });
+    
+    return allMessageEmotions;
   };
 
   const handleAnalyzeEmotion = async (text: string, title?: string, messages?: ConversationMessage[]) => {
@@ -45,6 +72,22 @@ const Index: React.FC = () => {
       // Save the raw emotion result
       setCurrentEmotion(emotionResult);
       
+      // Ensure messages have emotions and timestamps
+      const processedMessages = messages?.map((msg, idx) => {
+        // For this example, we'll use the same emotion result for all messages
+        // In a real app, you'd analyze each message separately
+        if (!msg.timestamp) {
+          msg.timestamp = new Date().toISOString();
+        }
+        
+        // Only add emotion to the latest message if it's missing
+        if (idx === messages.length - 1 && !msg.emotion) {
+          msg.emotion = emotionResult;
+        }
+        
+        return msg;
+      }) || [];
+      
       if (activeNoteId) {
         // Update existing note
         const updatedEntries = entries.map(entry => {
@@ -54,14 +97,14 @@ const Index: React.FC = () => {
               text: text,
               timestamp: new Date().toISOString(), // Update timestamp
               emotion: emotionResult,
-              messages: messages || activeNoteMessages
+              messages: processedMessages
             };
           }
           return entry;
         });
         
         setEntries(updatedEntries);
-        setActiveNoteMessages(messages || []);
+        setActiveNoteMessages(processedMessages);
         
         // Update entries in local storage
         updatedEntries.forEach(entry => saveEntry(entry));
@@ -78,7 +121,7 @@ const Index: React.FC = () => {
           text,
           timestamp: new Date().toISOString(),
           emotion: emotionResult,
-          messages: messages || []
+          messages: processedMessages
         };
         
         saveEntry(newEntry);
@@ -87,7 +130,7 @@ const Index: React.FC = () => {
         // Set this new note as active for continuing conversation
         setActiveNoteId(newEntry.id);
         setActiveNoteTitle(title || '');
-        setActiveNoteMessages(messages || []);
+        setActiveNoteMessages(processedMessages);
         
         toast({
           title: "Note saved",
@@ -232,7 +275,7 @@ const Index: React.FC = () => {
               <EmotionDisplay 
                 emotion={currentEmotion} 
                 isLoading={isLoading}
-                previousEmotions={previousEmotions}
+                previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
               />
             </div>
           )}
@@ -248,6 +291,7 @@ const Index: React.FC = () => {
           {activeTab === 'analysis' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-nousText-secondary">Emotion Timeline</h2>
+              <p className="text-sm text-nousText-muted">Tracking emotions across all messages and notes</p>
               <EmotionGraph emotionData={getEmotionData()} />
             </div>
           )}

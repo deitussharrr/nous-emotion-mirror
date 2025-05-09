@@ -15,7 +15,7 @@ import NoteSearch from '@/components/NoteSearch';
 
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
-import { JournalEntry, EmotionResult, EmotionType } from '@/types';
+import { JournalEntry, EmotionResult, EmotionType, ConversationMessage } from '@/types';
 
 const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -23,6 +23,9 @@ const Index: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'search' | 'checkins'>('journal');
   const [useGenZ, setUseGenZ] = useState<boolean>(false);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [activeNoteMessages, setActiveNoteMessages] = useState<ConversationMessage[]>([]);
+  const [activeNoteTitle, setActiveNoteTitle] = useState<string>('');
 
   // Process entries to get emotion data for the graph
   const getEmotionData = () => {
@@ -33,7 +36,7 @@ const Index: React.FC = () => {
     }));
   };
 
-  const handleAnalyzeEmotion = async (text: string, title?: string) => {
+  const handleAnalyzeEmotion = async (text: string, title?: string, messages?: ConversationMessage[]) => {
     setIsLoading(true);
     try {
       // Analyze emotion directly from the model
@@ -42,21 +45,55 @@ const Index: React.FC = () => {
       // Save the raw emotion result
       setCurrentEmotion(emotionResult);
       
-      const newEntry: JournalEntry = {
-        id: uuidv4(),
-        title,
-        text,
-        timestamp: new Date().toISOString(),
-        emotion: emotionResult,
-      };
-      
-      saveEntry(newEntry);
-      setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
-      
-      toast({
-        title: "Note saved",
-        description: `Detected mood: ${emotionResult.label} (${Math.round(emotionResult.score * 100)}%)`,
-      });
+      if (activeNoteId) {
+        // Update existing note
+        const updatedEntries = entries.map(entry => {
+          if (entry.id === activeNoteId) {
+            return {
+              ...entry,
+              text: text,
+              timestamp: new Date().toISOString(), // Update timestamp
+              emotion: emotionResult,
+              messages: messages || activeNoteMessages
+            };
+          }
+          return entry;
+        });
+        
+        setEntries(updatedEntries);
+        setActiveNoteMessages(messages || []);
+        
+        // Update entries in local storage
+        updatedEntries.forEach(entry => saveEntry(entry));
+        
+        toast({
+          title: "Note updated",
+          description: `Updated mood: ${emotionResult.label} (${Math.round(emotionResult.score * 100)}%)`,
+        });
+      } else {
+        // Create new note
+        const newEntry: JournalEntry = {
+          id: uuidv4(),
+          title,
+          text,
+          timestamp: new Date().toISOString(),
+          emotion: emotionResult,
+          messages: messages || []
+        };
+        
+        saveEntry(newEntry);
+        setEntries(prevEntries => [newEntry, ...prevEntries.slice(0, 6)]);
+        
+        // Set this new note as active for continuing conversation
+        setActiveNoteId(newEntry.id);
+        setActiveNoteTitle(title || '');
+        setActiveNoteMessages(messages || []);
+        
+        toast({
+          title: "Note saved",
+          description: `Detected mood: ${emotionResult.label} (${Math.round(emotionResult.score * 100)}%)`,
+        });
+      }
       
     } catch (error) {
       console.error("Error analyzing emotion:", error);
@@ -73,6 +110,24 @@ const Index: React.FC = () => {
   const refreshEntries = () => {
     const loadedEntries = getRecentEntries();
     setEntries(loadedEntries);
+  };
+  
+  const handleContinueNote = (id: string) => {
+    const selectedNote = entries.find(entry => entry.id === id);
+    if (selectedNote) {
+      setActiveTab('journal');
+      setActiveNoteId(id);
+      setActiveNoteTitle(selectedNote.title || '');
+      setActiveNoteMessages(selectedNote.messages || []);
+      setCurrentEmotion(selectedNote.emotion);
+    }
+  };
+  
+  const startNewNote = () => {
+    setActiveNoteId(null);
+    setActiveNoteTitle('');
+    setActiveNoteMessages([]);
+    setCurrentEmotion(null);
   };
   
   useEffect(() => {
@@ -95,7 +150,10 @@ const Index: React.FC = () => {
           <Logo />
           <nav className="flex space-x-2">
             <button
-              onClick={() => setActiveTab('journal')}
+              onClick={() => {
+                setActiveTab('journal');
+                // Don't reset active note, so users can go back to history and continue the same note
+              }}
               className={`p-2 rounded-lg transition-colors ${
                 activeTab === 'journal' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
               }`}
@@ -145,6 +203,20 @@ const Index: React.FC = () => {
         <main className="space-y-6">
           {activeTab === 'journal' && (
             <div className="space-y-6">
+              {activeNoteId && (
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-medium">
+                    {activeNoteTitle || 'Continuing your note...'}
+                  </h2>
+                  <button 
+                    onClick={startNewNote}
+                    className="text-sm text-nousText-muted hover:text-nousText-primary px-3 py-1 rounded-md hover:bg-white/5"
+                  >
+                    Start new note
+                  </button>
+                </div>
+              )}
+              
               <LanguageToggle useGenZ={useGenZ} setUseGenZ={(value) => {
                 setUseGenZ(value);
                 localStorage.setItem('useGenZ', String(value));
@@ -154,6 +226,8 @@ const Index: React.FC = () => {
                 onAnalyze={handleAnalyzeEmotion} 
                 isLoading={isLoading}
                 lastEmotion={currentEmotion?.label}
+                activeNoteId={activeNoteId || undefined}
+                existingMessages={activeNoteMessages}
               />
               <EmotionDisplay 
                 emotion={currentEmotion} 
@@ -164,11 +238,11 @@ const Index: React.FC = () => {
           )}
           
           {activeTab === 'history' && (
-            <JournalHistory entries={entries} onEntriesUpdate={refreshEntries} />
+            <JournalHistory entries={entries} onEntriesUpdate={refreshEntries} onContinueNote={handleContinueNote} />
           )}
           
           {activeTab === 'search' && (
-            <NoteSearch entries={entries} />
+            <NoteSearch entries={entries} onContinueNote={handleContinueNote} />
           )}
           
           {activeTab === 'analysis' && (

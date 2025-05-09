@@ -1,13 +1,25 @@
 
-import { JournalEntry } from "../types";
+import { JournalEntry, ConversationMessage } from "../types";
 import { format } from "date-fns";
 
 const STORAGE_KEY = "nous_journal_entries";
 
 export const saveEntry = (entry: JournalEntry): void => {
   try {
+    // First check if entry already exists to replace it
     const existingEntries = getEntries();
-    const updatedEntries = [entry, ...existingEntries];
+    const existingIndex = existingEntries.findIndex(e => e.id === entry.id);
+    
+    let updatedEntries;
+    if (existingIndex >= 0) {
+      // Update existing entry
+      updatedEntries = [...existingEntries];
+      updatedEntries[existingIndex] = entry;
+    } else {
+      // Add new entry
+      updatedEntries = [entry, ...existingEntries];
+    }
+    
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEntries));
   } catch (error) {
     console.error("Error saving journal entry:", error);
@@ -17,7 +29,22 @@ export const saveEntry = (entry: JournalEntry): void => {
 export const getEntries = (): JournalEntry[] => {
   try {
     const entries = localStorage.getItem(STORAGE_KEY);
-    return entries ? JSON.parse(entries) : [];
+    const parsedEntries = entries ? JSON.parse(entries) : [];
+    
+    // Ensure all entries have a messages array (for backward compatibility)
+    return parsedEntries.map((entry: JournalEntry) => {
+      if (!entry.messages) {
+        return {
+          ...entry,
+          messages: entry.text ? [{
+            role: 'user',
+            content: entry.text,
+            timestamp: entry.timestamp
+          }] : []
+        };
+      }
+      return entry;
+    });
   } catch (error) {
     console.error("Error retrieving journal entries:", error);
     return [];
@@ -66,7 +93,23 @@ export const importEntries = (jsonString: string): boolean => {
   try {
     const entries = JSON.parse(jsonString);
     if (!Array.isArray(entries)) throw new Error('Invalid format');
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    
+    // Ensure all imported entries have messages array
+    const updatedEntries = entries.map((entry: JournalEntry) => {
+      if (!entry.messages) {
+        return {
+          ...entry,
+          messages: entry.text ? [{
+            role: 'user',
+            content: entry.text,
+            timestamp: entry.timestamp
+          }] : []
+        };
+      }
+      return entry;
+    });
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEntries));
     return true;
   } catch (error) {
     console.error("Error importing journal entries:", error);

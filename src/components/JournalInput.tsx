@@ -2,14 +2,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConversationMessage } from '@/types';
+import { Textarea } from '@/components/ui/textarea';
 
 interface JournalInputProps {
-  onAnalyze: (text: string, title?: string) => void;
+  onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;
   isLoading: boolean;
   lastEmotion?: string;
+  activeNoteId?: string;
+  existingMessages: ConversationMessage[];
 }
 
-const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading, lastEmotion }) => {
+const JournalInput: React.FC<JournalInputProps> = ({ 
+  onAnalyze, 
+  isLoading, 
+  lastEmotion, 
+  activeNoteId,
+  existingMessages = []
+}) => {
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -25,9 +35,22 @@ const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading, lastE
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (text.trim().length > 0) {
-      onAnalyze(text, title.trim() || undefined);
+      // Create a new message
+      const newMessage: ConversationMessage = {
+        role: 'user',
+        content: text,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Combine existing messages with new message
+      const updatedMessages = [...existingMessages, newMessage];
+      
+      // Combine all message content for analysis
+      const fullText = updatedMessages.map(msg => msg.content).join('\n');
+      
+      onAnalyze(fullText, title || undefined, updatedMessages);
       setText(''); // Clear input after sending
-      setTitle(''); // Clear title after sending
+      // Don't clear title if we're adding to an existing note
     }
   };
   
@@ -55,21 +78,43 @@ const JournalInput: React.FC<JournalInputProps> = ({ onAnalyze, isLoading, lastE
   
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-3">
-      <input
-        type="text"
-        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none
+      {!activeNoteId && (
+        <input
+          type="text"
+          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none
                   text-nousText-primary placeholder-nousText-muted transition-all text-lg font-medium"
-        placeholder="Note title (optional)"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
+          placeholder="Note title (optional)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      )}
+      
+      {/* Display message history */}
+      {existingMessages.length > 0 && (
+        <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-4 max-h-[300px] overflow-y-auto">
+          {existingMessages.map((message, index) => (
+            <div 
+              key={index} 
+              className={`p-3 rounded-lg ${
+                message.role === 'user' ? 'bg-white/10 ml-12' : 'bg-nousPurple/20'
+              }`}
+            >
+              <p className="text-sm text-nousText-muted mb-1">
+                {message.role === 'user' ? 'You' : 'Assistant'}:
+              </p>
+              <p className="whitespace-pre-wrap">{message.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      
       <div className="flex gap-2">
         <div className="flex-1 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden">
-          <textarea
+          <Textarea
             ref={textareaRef}
             className="w-full px-4 py-3 bg-transparent focus:outline-none
-                     text-nousText-primary placeholder-nousText-muted transition-all
-                     text-base leading-relaxed resize-none min-h-[120px] max-h-[300px]"
+                      text-nousText-primary placeholder-nousText-muted transition-all
+                      text-base leading-relaxed resize-none min-h-[120px] max-h-[300px]"
             placeholder={getPlaceholder()}
             value={text}
             onChange={(e) => setText(e.target.value)}

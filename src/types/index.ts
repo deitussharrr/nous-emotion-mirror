@@ -5,6 +5,7 @@ export interface JournalEntry {
   text: string;
   timestamp: string;
   emotion: EmotionResult;
+  messages: ConversationMessage[]; // Adding messages array
 }
 
 export interface EmotionResult {

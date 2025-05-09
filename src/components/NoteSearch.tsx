@@ -9,9 +9,10 @@ import { toast } from '@/components/ui/use-toast';
 
 interface NoteSearchProps {
   entries: JournalEntry[];
+  onContinueNote?: (id: string) => void;
 }
 
-const NoteSearch: React.FC<NoteSearchProps> = ({ entries }) => {
+const NoteSearch: React.FC<NoteSearchProps> = ({ entries, onContinueNote }) => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const handleDelete = (id: string) => {
@@ -29,7 +30,12 @@ const NoteSearch: React.FC<NoteSearchProps> = ({ entries }) => {
     const textMatch = entry.text.toLowerCase().includes(searchLower);
     const emotionMatch = entry.emotion.label.toLowerCase().includes(searchLower);
     
-    return titleMatch || textMatch || emotionMatch;
+    // Also search in messages if they exist
+    const messageMatch = entry.messages?.some(msg => 
+      msg.content.toLowerCase().includes(searchLower)
+    );
+    
+    return titleMatch || textMatch || emotionMatch || messageMatch;
   });
   
   return (
@@ -63,7 +69,12 @@ const NoteSearch: React.FC<NoteSearchProps> = ({ entries }) => {
           </div>
         ) : (
           filteredEntries.map(entry => (
-            <ConversationSummary key={entry.id} entry={entry} onDelete={handleDelete} />
+            <ConversationSummary 
+              key={entry.id} 
+              entry={entry} 
+              onDelete={handleDelete} 
+              onContinue={onContinueNote}
+            />
           ))
         )}
       </div>

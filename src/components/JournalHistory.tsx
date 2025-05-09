@@ -12,9 +12,10 @@ import ConversationSummary from '@/components/ConversationSummary';
 interface JournalHistoryProps {
   entries: JournalEntry[];
   onEntriesUpdate: () => void;
+  onContinueNote?: (id: string) => void;
 }
 
-const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdate }) => {
+const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdate, onContinueNote }) => {
   const entriesByDay = getEntriesByDay();
   
   const handleDelete = (id: string) => {
@@ -118,7 +119,12 @@ const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdat
             <DailyEmotions entries={dayEntries} date={day} />
             <div className="space-y-1">
               {dayEntries.map(entry => (
-                <ConversationSummary key={entry.id} entry={entry} onDelete={handleDelete} />
+                <ConversationSummary 
+                  key={entry.id} 
+                  entry={entry} 
+                  onDelete={handleDelete}
+                  onContinue={onContinueNote}
+                />
               ))}
             </div>
           </div>

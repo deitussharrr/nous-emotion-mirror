@@ -4,6 +4,7 @@ import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConversationMessage } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
+import NoteEmotionGraph from '@/components/NoteEmotionGraph';
 
 interface JournalInputProps {
   onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;
@@ -113,6 +114,11 @@ const JournalInput: React.FC<JournalInputProps> = ({
             </div>
           ))}
         </div>
+      )}
+      
+      {/* Add Emotion Graph for this note */}
+      {existingMessages.length > 1 && (
+        <NoteEmotionGraph messages={existingMessages} />
       )}
       
       <div className="flex gap-2">

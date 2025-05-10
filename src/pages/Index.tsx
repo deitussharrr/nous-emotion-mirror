@@ -296,16 +296,6 @@ const Index: React.FC = () => {
                 isLoading={isLoading}
                 previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
               />
-              <EmotionDisplay 
-                emotion={currentEmotion} 
-                isLoading={isLoading}
-                previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
-              />
-              <EmotionDisplay 
-                emotion={currentEmotion} 
-                isLoading={isLoading}
-                previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
-              />
               <EmotionGraph emotionData={getEmotionData()} />
             </div>
           )}
@@ -322,11 +312,6 @@ const Index: React.FC = () => {
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-nousText-secondary">Emotion Timeline</h2>
               <p className="text-sm text-nousText-muted">Tracking emotions across all messages</p>
-              <EmotionDisplay 
-                emotion={currentEmotion} 
-                isLoading={isLoading}
-                previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
-              />
               <EmotionDisplay 
                 emotion={currentEmotion} 
                 isLoading={isLoading}

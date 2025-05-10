@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
-import { Book, History, ChartLine, Bell, Search } from 'lucide-react';
+import { Book, History, ChartLine, Bell, Search, AlertTriangle } from 'lucide-react';
 
 import Logo from '@/components/Logo';
 import JournalInput from '@/components/JournalInput';
@@ -11,16 +11,18 @@ import JournalHistory from '@/components/JournalHistory';
 import LanguageToggle from '@/components/LanguageToggle';
 import CheckInPreferences from '@/components/CheckInPreferences';
 import NoteSearch from '@/components/NoteSearch';
+import EmergencyContactForm from '@/components/EmergencyContactForm';
 
 import { analyzeEmotion } from '@/lib/analyzeEmotion';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
+import { triggerEmergencyResponse, isExtremelyNegative } from '@/lib/triggerEmergencyResponse';
 import { JournalEntry, EmotionResult, EmotionType, ConversationMessage } from '@/types';
 
 const Index: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [currentEmotion, setCurrentEmotion] = useState<EmotionResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'search' | 'checkins'>('journal');
+  const [activeTab, setActiveTab] = useState<'journal' | 'history' | 'analysis' | 'search' | 'checkins' | 'emergency'>('journal');
   const [useGenZ, setUseGenZ] = useState<boolean>(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeNoteMessages, setActiveNoteMessages] = useState<ConversationMessage[]>([]);
@@ -79,6 +81,8 @@ const Index: React.FC = () => {
         return msg;
       }) || [];
       
+      let entryId = activeNoteId;
+      
       if (activeNoteId) {
         // Update existing note
         const updatedEntries = entries.map(entry => {
@@ -106,8 +110,9 @@ const Index: React.FC = () => {
         });
       } else {
         // Create new note
+        entryId = uuidv4();
         const newEntry: JournalEntry = {
-          id: uuidv4(),
+          id: entryId,
           title,
           text: text, // Keep this for backward compatibility
           timestamp: new Date().toISOString(),
@@ -127,6 +132,20 @@ const Index: React.FC = () => {
           title: "Note saved",
           description: `Detected mood: ${emotionResult.label} (${Math.round(emotionResult.score * 100)}%)`,
         });
+      }
+      
+      // Check if this entry should trigger the emergency response system
+      // This happens AFTER saving/updating the entry
+      if (isExtremelyNegative(emotionResult)) {
+        // Notify the user that emergency contact may be notified
+        toast({
+          variant: "destructive",
+          title: "Support Alert",
+          description: "This entry indicates distress. Your emergency contact may be notified if enabled.",
+        });
+        
+        // Trigger the emergency response system
+        await triggerEmergencyResponse(text, emotionResult, entryId);
       }
       
     } catch (error) {
@@ -231,6 +250,15 @@ const Index: React.FC = () => {
             >
               <Bell className="w-5 h-5" />
             </button>
+            <button
+              onClick={() => setActiveTab('emergency')}
+              className={`p-2 rounded-lg transition-colors ${
+                activeTab === 'emergency' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
+              }`}
+              title="Emergency Response Settings"
+            >
+              <AlertTriangle className="w-5 h-5" />
+            </button>
           </nav>
         </header>
         
@@ -289,6 +317,11 @@ const Index: React.FC = () => {
 
           {activeTab === 'checkins' && (
             <CheckInPreferences />
+          )}
+          
+          {/* Add new tab for emergency settings */}
+          {activeTab === 'emergency' && (
+            <EmergencyContactForm />
           )}
         </main>
       </div>

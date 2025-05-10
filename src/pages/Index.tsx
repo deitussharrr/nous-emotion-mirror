@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
 import { Book, History, ChartLine, Bell, Search, AlertTriangle } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 import Logo from '@/components/Logo';
 import JournalInput from '@/components/JournalInput';
@@ -198,6 +199,7 @@ const Index: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-nousBackground text-nousText-primary">
+      <Analytics />
       <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
         <header className="flex items-center justify-between">
           <Logo />

@@ -5,6 +5,8 @@ import { JournalEntry } from '@/types';
 import { EmotionType } from '@/types';
 import { ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import NoteEmotionGraph from '@/components/NoteEmotionGraph';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { generateComfortingMessage } from '@/lib/triggerEmergencyResponse';
 
 interface ConversationSummaryProps {
   entry: JournalEntry;
@@ -78,38 +80,56 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
       
       <div className="space-y-3 pl-10">
         {entry.messages && entry.messages.length > 0 ? (
-          <div className={`space-y-2 transition-all ${expanded ? '' : 'max-h-[150px] overflow-hidden'}`}>
-            {expanded ? (
-              // Show all messages when expanded
-              entry.messages.map((message, idx) => (
-                <div 
-                  key={idx} 
-                  className={`p-3 rounded-lg ${message.role === 'user' ? 'bg-white/10 ml-12' : 'bg-nousPurple/20'}`}
-                >
-                  <p className="text-sm text-nousText-muted mb-1">
-                    {message.role === 'user' ? 'You' : 'Assistant'}
-                    {message.timestamp && ` - ${format(new Date(message.timestamp), 'MMM d, h:mm a')}`}:
-                  </p>
-                  <p className="whitespace-pre-wrap">{message.content}</p>
-                </div>
-              ))
-            ) : (
-              // Show first message + summary when collapsed
-              <>
-                <div className="text-nousText-secondary bg-white/5 rounded-lg p-3">
-                  <p className="whitespace-pre-wrap">{entry.messages[0].content}</p>
-                  {entry.messages.length > 1 && (
-                    <p className="text-nousText-muted text-xs mt-2">
-                      {entry.messages.length - 1} more {entry.messages.length - 1 === 1 ? 'message' : 'messages'}...
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`space-y-2 transition-all ${expanded ? '' : 'max-h-[150px] overflow-hidden'}`}>
+              {expanded ? (
+                // Show all messages when expanded
+                entry.messages.map((message, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`p-3 rounded-lg ${message.role === 'user' ? 'bg-white/10 ml-12' : 'bg-nousPurple/20'}`}
+                  >
+                    <p className="text-sm text-nousText-muted mb-1">
+                      {message.role === 'user' ? 'You' : 'Assistant'}
+                      {message.timestamp && ` - ${format(new Date(message.timestamp), 'MMM d, h:mm a')}`}:
                     </p>
-                  )}
-                </div>
-              </>
-            )}
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                ))
+              ) : (
+                // Show first message + summary when collapsed
+                <>
+                  <div className="text-nousText-secondary bg-white/5 rounded-lg p-3">
+                    <p className="whitespace-pre-wrap">{entry.messages[0].content}</p>
+                    {entry.messages.length > 1 && (
+                      <p className="text-nousText-muted text-xs mt-2">
+                        {entry.messages.length - 1} more {entry.messages.length - 1 === 1 ? 'message' : 'messages'}...
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Comforting message for this entry */}
+            <Alert className="bg-nousPurple/10 border-nousPurple/30 h-fit">
+              <AlertDescription className="text-nousText-primary">
+                {generateComfortingMessage(entry.emotion)}
+              </AlertDescription>
+            </Alert>
           </div>
         ) : (
-          <div className="text-nousText-secondary bg-white/5 rounded-lg p-3">
-            <p className="whitespace-pre-wrap">{entry.text}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="text-nousText-secondary bg-white/5 rounded-lg p-3">
+              <p className="whitespace-pre-wrap">{entry.text}</p>
+            </div>
+            
+            {/* Comforting message for text-only entries */}
+            <Alert className="bg-nousPurple/10 border-nousPurple/30 h-fit">
+              <AlertDescription className="text-nousText-primary">
+                {generateComfortingMessage(entry.emotion)}
+              </AlertDescription>
+            </Alert>
           </div>
         )}
         

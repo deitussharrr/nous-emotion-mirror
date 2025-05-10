@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ConversationMessage } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import NoteEmotionGraph from '@/components/NoteEmotionGraph';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { generateComfortingMessage } from '@/lib/triggerEmergencyResponse';
 
 interface JournalInputProps {
   onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;
@@ -83,6 +85,27 @@ const JournalInput: React.FC<JournalInputProps> = ({
         return "What's on your mind today?";
     }
   };
+
+  // Get comforting message based on the last message emotion
+  const renderComfortingMessage = () => {
+    if (!existingMessages || existingMessages.length === 0) return null;
+    
+    // Look for the most recent message that has emotion data
+    for (let i = existingMessages.length - 1; i >= 0; i--) {
+      const message = existingMessages[i];
+      if (message.emotion) {
+        const comfortMessage = generateComfortingMessage(message.emotion);
+        return (
+          <Alert className="mb-4 bg-white/5 border-nousPurple">
+            <AlertDescription className="text-nousText-primary">
+              {comfortMessage}
+            </AlertDescription>
+          </Alert>
+        );
+      }
+    }
+    return null;
+  };
   
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-3">
@@ -97,22 +120,29 @@ const JournalInput: React.FC<JournalInputProps> = ({
         />
       )}
       
-      {/* Display message history */}
+      {/* Display message history and comforting message side by side */}
       {existingMessages.length > 0 && (
-        <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-4 max-h-[300px] overflow-y-auto">
-          {existingMessages.map((message, index) => (
-            <div 
-              key={index} 
-              className={`p-3 rounded-lg ${
-                message.role === 'user' ? 'bg-white/10 ml-12' : 'bg-nousPurple/20'
-              }`}
-            >
-              <p className="text-sm text-nousText-muted mb-1">
-                {message.role === 'user' ? 'You' : 'Assistant'}:
-              </p>
-              <p className="whitespace-pre-wrap">{message.content}</p>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-4 max-h-[300px] overflow-y-auto">
+            {existingMessages.map((message, index) => (
+              <div 
+                key={index} 
+                className={`p-3 rounded-lg ${
+                  message.role === 'user' ? 'bg-white/10 ml-12' : 'bg-nousPurple/20'
+                }`}
+              >
+                <p className="text-sm text-nousText-muted mb-1">
+                  {message.role === 'user' ? 'You' : 'Assistant'}:
+                </p>
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              </div>
+            ))}
+          </div>
+          
+          {/* Comforting message panel */}
+          <div className="rounded-xl bg-nousPurple/10 border border-nousPurple/20 p-4 space-y-4 flex items-center">
+            {renderComfortingMessage()}
+          </div>
         </div>
       )}
       

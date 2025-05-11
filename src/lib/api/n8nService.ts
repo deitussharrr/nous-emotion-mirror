@@ -28,7 +28,7 @@ export const processEmotionWithOpenRouter = async (
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Model': 'google/gemini-2.0-flash-exp:free'
+        'Model': "google/gemma-3-4b-it:free"
       },
       body: JSON.stringify({
         entryId,

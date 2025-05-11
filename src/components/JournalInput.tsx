@@ -103,7 +103,6 @@ const JournalInput: React.FC<JournalInputProps> = ({
               activeNoteId || 'temp'
             );
             setCalmingMessage(response);
-            // Check if the user has provided enough information
             userNeedsToShareMore = response.includes('tell me more');
             break;
           }

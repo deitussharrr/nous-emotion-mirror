@@ -101,7 +101,8 @@ const JournalInput: React.FC<JournalInputProps> = ({
             const response = await processEmotionWithOpenRouter(
               contextMessages,
               message.emotion,
-              activeNoteId || 'temp'
+              activeNoteId || 'temp',
+              'google/gemma-3-4b-it:free' // Ensure the new LLM model is used
             );
             setCalmingMessage(response);
             userNeedsToShareMore = response.includes('Can you elaborate on that?') || response.includes('Tell me more about how you\'re feeling.');

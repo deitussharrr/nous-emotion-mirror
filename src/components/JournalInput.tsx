@@ -92,18 +92,21 @@ const JournalInput: React.FC<JournalInputProps> = ({
   useEffect(() => {
     const fetchCalmingMessage = async () => {
       if (!existingMessages || existingMessages.length === 0) return;
-      
-      // Look for the most recent message that has emotion data
-      for (let i = existingMessages.length - 1; i >= 0; i--) {
-        const message = existingMessages[i];
-        if (message.emotion) {
-          const response = await processEmotionWithOpenRouter(
-            message.content,
-            message.emotion,
-            activeNoteId || 'temp'
-          );
-          setCalmingMessage(response);
-          break;
+      let userNeedsToShareMore = true;
+      while (userNeedsToShareMore) {
+        for (let i = existingMessages.length - 1; i >= 0; i--) {
+          const message = existingMessages[i];
+          if (message.emotion) {
+            const response = await processEmotionWithOpenRouter(
+              message.content,
+              message.emotion,
+              activeNoteId || 'temp'
+            );
+            setCalmingMessage(response);
+            // Check if the user has provided enough information
+            userNeedsToShareMore = response.includes('tell me more');
+            break;
+          }
         }
       }
     };

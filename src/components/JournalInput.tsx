@@ -97,7 +97,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
       for (let i = existingMessages.length - 1; i >= 0; i--) {
         const message = existingMessages[i];
         if (message.emotion) {
-          const response = await processEmotionWithN8n(
+          const response = await processEmotionWithOpenRouter(
             message.content,
             message.emotion,
             activeNoteId || 'temp'

@@ -6,7 +6,7 @@ import { ConversationMessage } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import NoteEmotionGraph from '@/components/NoteEmotionGraph';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { processEmotionWithN8n } from '@/lib/api/n8nService';
+import { processEmotionWithOpenRouter } from '@/lib/api/n8nService';
 
 interface JournalInputProps {
   onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;

@@ -93,17 +93,18 @@ const JournalInput: React.FC<JournalInputProps> = ({
     const fetchCalmingMessage = async () => {
       if (!existingMessages || existingMessages.length === 0) return;
       let userNeedsToShareMore = true;
+      const contextMessages = existingMessages.map(msg => msg.content).join(' ');
       while (userNeedsToShareMore) {
         for (let i = existingMessages.length - 1; i >= 0; i--) {
           const message = existingMessages[i];
           if (message.emotion) {
             const response = await processEmotionWithOpenRouter(
-              message.content,
+              contextMessages,
               message.emotion,
               activeNoteId || 'temp'
             );
             setCalmingMessage(response);
-            userNeedsToShareMore = response.includes('tell me more');
+            userNeedsToShareMore = response.includes('Can you elaborate on that?') || response.includes('Tell me more about how you\'re feeling.');
             break;
           }
         }

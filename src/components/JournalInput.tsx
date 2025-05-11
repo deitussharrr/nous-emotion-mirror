@@ -6,7 +6,7 @@ import { ConversationMessage } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import NoteEmotionGraph from '@/components/NoteEmotionGraph';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { generateComfortingMessage } from '@/lib/triggerEmergencyResponse';
+import { processEmotionWithN8n } from '@/lib/api/n8nService';
 
 interface JournalInputProps {
   onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;
@@ -87,24 +87,40 @@ const JournalInput: React.FC<JournalInputProps> = ({
   };
 
   // Get comforting message based on the last message emotion
-  const renderComfortingMessage = () => {
-    if (!existingMessages || existingMessages.length === 0) return null;
-    
-    // Look for the most recent message that has emotion data
-    for (let i = existingMessages.length - 1; i >= 0; i--) {
-      const message = existingMessages[i];
-      if (message.emotion) {
-        const comfortMessage = generateComfortingMessage(message.emotion);
-        return (
-          <Alert className="mb-4 bg-white/5 border-nousPurple">
-            <AlertDescription className="text-nousText-primary">
-              {comfortMessage}
-            </AlertDescription>
-          </Alert>
-        );
+  const [calmingMessage, setCalmingMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCalmingMessage = async () => {
+      if (!existingMessages || existingMessages.length === 0) return;
+      
+      // Look for the most recent message that has emotion data
+      for (let i = existingMessages.length - 1; i >= 0; i--) {
+        const message = existingMessages[i];
+        if (message.emotion) {
+          const response = await processEmotionWithN8n(
+            message.content,
+            message.emotion,
+            activeNoteId || 'temp'
+          );
+          setCalmingMessage(response);
+          break;
+        }
       }
-    }
-    return null;
+    };
+
+    fetchCalmingMessage();
+  }, [existingMessages, activeNoteId]);
+
+  const renderComfortingMessage = () => {
+    if (!calmingMessage) return null;
+    
+    return (
+      <Alert className="mb-4 bg-white/5 border-nousPurple">
+        <AlertDescription className="text-nousText-primary">
+          {calmingMessage}
+        </AlertDescription>
+      </Alert>
+    );
   };
   
   return (

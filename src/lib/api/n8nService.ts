@@ -1,4 +1,3 @@
-
 // src/lib/api/n8nService.ts
 
 import { EmotionResult } from '@/types';
@@ -12,8 +11,7 @@ const OPENROUTER_API_KEY = 'sk-or-v1-ce05521ead98e9c61e5409e07992c4b80eac0e76055
 export const processEmotionWithOpenRouter = async (
   text: string,
   emotion: EmotionResult,
-  entryId: string,
-  model: string = "google/gemma-3-4b-it:free"
+  entryId: string
 ): Promise<string> => {
   try {
     // Debug logs to help identify the issue
@@ -26,6 +24,7 @@ export const processEmotionWithOpenRouter = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+<<<<<<< HEAD
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`, 
         'HTTP-Referer': 'https://emotion-journal.vercel.app', // Adding a fixed domain for OpenRouter
         'X-Title': 'Emotion Journal'
@@ -45,6 +44,18 @@ export const processEmotionWithOpenRouter = async (
           }
         ],
         model: model
+=======
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Model': "google/gemma-3-4b-it:free"
+      },
+      body: JSON.stringify({
+        entryId,
+        text: text.substring(0, 200) + (text.length > 200 ? '...' : ''),
+        emotionLabel: emotion.label,
+        emotionScore: emotion.score,
+        timestamp: new Date().toISOString(),
+        requestType: 'calmingMessage'
+>>>>>>> parent of 80c3cc6 (Fix: Improve AI response with Gemini and OpenRouter)
       }),
     });
 
@@ -68,3 +79,51 @@ export const processEmotionWithOpenRouter = async (
     return "Error connecting to OpenRouter. Please try again later.";
   }
 };
+<<<<<<< HEAD
+=======
+
+// Fallback message generator if OpenRouter is not available
+const generateFallbackMessage = (emotion: EmotionResult): string => {
+  const emotionLabel = emotion.label.toLowerCase();
+  const emotionIntensity = emotion.score > 0.7 ? 'strong' : 'moderate';
+
+  const messageTemplates = {
+    joy: [
+      'Your happiness is contagious! Keep embracing these positive moments.',
+      'What a wonderful feeling to experience! Cherish this joy.'
+    ],
+    sadness: [
+      'I hear you, and it\'s okay to feel this way. Take gentle care of yourself.',
+      'Remember that you\'re not alone in feeling this way. This too shall pass.'
+    ],
+    anger: [
+      'I understand you\'re feeling frustrated. Take a deep breath with me.',
+      'Your feelings are valid. Let\'s process this together.'
+    ],
+    fear: [
+      'You\'re brave for acknowledging your fears. Let\'s face them together.',
+      'Remember that courage isn\'t the absence of fear, but moving forward despite it.'
+    ],
+    surprise: [
+      'Life is full of unexpected moments! How are you processing this surprise?',
+      'Sometimes the unexpected can lead to wonderful discoveries.'
+    ],
+    love: [
+      'What a beautiful emotion to experience! Let it fill your heart.',
+      'Love has a way of making everything brighter. Embrace this feeling.'
+    ],
+    neutral: [
+      'Taking time to reflect is valuable. What\'s on your mind?',
+      'Sometimes a calm mind helps us see things more clearly.'
+    ]
+  };
+
+  const defaultMessages = [
+    'Thank you for sharing your feelings. You\'re doing great.',
+    'Every emotion has its purpose. You\'re handling this well.'
+  ];
+
+  const messages = messageTemplates[emotionLabel as keyof typeof messageTemplates] || defaultMessages;
+  return messages[emotionIntensity === 'strong' ? 0 : 1];
+};
+>>>>>>> parent of 80c3cc6 (Fix: Improve AI response with Gemini and OpenRouter)

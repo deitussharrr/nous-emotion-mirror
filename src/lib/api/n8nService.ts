@@ -2,6 +2,7 @@
 // src/lib/api/n8nService.ts
 
 import { EmotionResult } from '@/types';
+import { toast } from '@/components/ui/use-toast';
 
 interface OpenRouterResponse {
   calmingMessage: string;
@@ -9,6 +10,7 @@ interface OpenRouterResponse {
   error?: string;
 }
 
+// Make sure we're correctly accessing the environment variables
 const OPENROUTER_API_URL = import.meta.env.VITE_NEXT_PUBLIC_OPENROUTER_API_URL;
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
@@ -20,8 +22,17 @@ export const processEmotionWithOpenRouter = async (
   model: string = "google/gemma-3-4b-it:free"
 ): Promise<string> => {
   try {
+    // Debug logs to help identify the issue
+    console.log('OpenRouter API URL:', OPENROUTER_API_URL);
+    console.log('OpenRouter API KEY exists:', !!OPENROUTER_API_KEY);
+
     if (!OPENROUTER_API_URL) {
-      console.log('OpenRouter API URL not configured');
+      console.error('OpenRouter API URL not configured. Please check your .env.local file.');
+      toast({
+        variant: "destructive",
+        title: "Configuration Error",
+        description: "OpenRouter API URL is not configured. Please check your environment variables.",
+      });
       return "Please configure the OpenRouter API URL in your environment variables.";
     }
 
@@ -31,29 +42,43 @@ export const processEmotionWithOpenRouter = async (
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Emotion Journal',
         'Model': model
       },
       body: JSON.stringify({
-        entryId,
-        text: text.substring(0, 200) + (text.length > 200 ? '...' : ''),
-        emotionLabel: emotion.label,
-        emotionScore: emotion.score,
-        timestamp: new Date().toISOString(),
-        requestType: 'calmingMessage',
-        systemPrompt: "You are an empathetic AI assistant helping someone process their emotions. "+
-          "Provide a short, focused response (1-2 sentences) that acknowledges their feelings without "+
-          "being repetitive. Don't ask follow-up questions unless necessary. Your goal is to make the "+
-          "person feel heard and validated, not to continue a conversation. Be genuine and supportive."
+        messages: [
+          {
+            role: "system",
+            content: "You are an empathetic AI assistant helping someone process their emotions. "+
+              "Provide a short, focused response (1-2 sentences) that acknowledges their feelings without "+
+              "being repetitive. Don't ask follow-up questions unless necessary. Your goal is to make the "+
+              "person feel heard and validated, not to continue a conversation. Be genuine and supportive."
+          },
+          {
+            role: "user",
+            content: `I'm feeling ${emotion.label} (confidence: ${Math.round(emotion.score * 100)}%) about this: "${text.substring(0, 200) + (text.length > 200 ? '...' : '')}"`
+          }
+        ],
+        model: model
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenRouter API request failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`OpenRouter API request failed: ${response.status}`, errorText);
+      return `OpenRouter API request failed: ${response.status}`;
     }
 
-    const data: OpenRouterResponse = await response.json();
-    return data.calmingMessage || "No response from LLM.";
-
+    const data = await response.json();
+    console.log('OpenRouter API response:', data);
+    
+    // Extract the content from the response
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content || "No response from LLM.";
+    }
+    
+    return "Unexpected response format from OpenRouter.";
   } catch (error) {
     console.error('Error processing emotion with OpenRouter:', error);
     return "Error connecting to OpenRouter. Please try again later.";

@@ -1,3 +1,4 @@
+
 // src/lib/api/n8nService.ts
 
 import { EmotionResult } from '@/types';
@@ -14,7 +15,8 @@ const OPENROUTER_API_URL = process.env.NEXT_PUBLIC_OPENROUTER_API_URL;
 export const processEmotionWithOpenRouter = async (
   text: string,
   emotion: EmotionResult,
-  entryId: string
+  entryId: string,
+  model: string = "google/gemma-3-4b-it:free"
 ): Promise<string> => {
   try {
     if (!OPENROUTER_API_URL) {
@@ -28,7 +30,7 @@ export const processEmotionWithOpenRouter = async (
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Model': "google/gemma-3-4b-it:free"
+        'Model': model
       },
       body: JSON.stringify({
         entryId,
@@ -36,7 +38,11 @@ export const processEmotionWithOpenRouter = async (
         emotionLabel: emotion.label,
         emotionScore: emotion.score,
         timestamp: new Date().toISOString(),
-        requestType: 'calmingMessage'
+        requestType: 'calmingMessage',
+        systemPrompt: "You are an empathetic AI assistant helping someone process their emotions. "+
+          "Provide a short, focused response (1-2 sentences) that acknowledges their feelings without "+
+          "being repetitive. Don't ask follow-up questions unless necessary. Your goal is to make the "+
+          "person feel heard and validated, not to continue a conversation. Be genuine and supportive."
       }),
     });
 

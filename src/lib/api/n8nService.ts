@@ -4,15 +4,9 @@
 import { EmotionResult } from '@/types';
 import { toast } from '@/components/ui/use-toast';
 
-interface OpenRouterResponse {
-  calmingMessage: string;
-  success: boolean;
-  error?: string;
-}
-
 // Make sure we're correctly accessing the environment variables
-const OPENROUTER_API_URL = import.meta.env.VITE_NEXT_PUBLIC_OPENROUTER_API_URL;
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_API_KEY = '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';
 
 // Function to send emotion data to OpenRouter and get calming message
 export const processEmotionWithOpenRouter = async (
@@ -26,16 +20,6 @@ export const processEmotionWithOpenRouter = async (
     console.log('OpenRouter API URL:', OPENROUTER_API_URL);
     console.log('OpenRouter API KEY exists:', !!OPENROUTER_API_KEY);
 
-    if (!OPENROUTER_API_URL) {
-      console.error('OpenRouter API URL not configured. Please check your .env.local file.');
-      toast({
-        variant: "destructive",
-        title: "Configuration Error",
-        description: "OpenRouter API URL is not configured. Please check your environment variables.",
-      });
-      return "Please configure the OpenRouter API URL in your environment variables.";
-    }
-
     // Call the OpenRouter API with emotion data
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
@@ -43,8 +27,7 @@ export const processEmotionWithOpenRouter = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': window.location.origin,
-        'X-Title': 'Emotion Journal',
-        'Model': model
+        'X-Title': 'Emotion Journal'
       },
       body: JSON.stringify({
         messages: [

@@ -9,7 +9,8 @@ interface OpenRouterResponse {
   error?: string;
 }
 
-const OPENROUTER_API_URL = process.env.NEXT_PUBLIC_OPENROUTER_API_URL;
+const OPENROUTER_API_URL = import.meta.env.VITE_NEXT_PUBLIC_OPENROUTER_API_URL;
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
 // Function to send emotion data to OpenRouter and get calming message
 export const processEmotionWithOpenRouter = async (
@@ -29,7 +30,7 @@ export const processEmotionWithOpenRouter = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Model': model
       },
       body: JSON.stringify({

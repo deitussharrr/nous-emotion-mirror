@@ -22,7 +22,7 @@ export const processEmotionWithOpenRouter = async (
   try {
     if (!OPENROUTER_API_URL) {
       console.log('OpenRouter API URL not configured');
-      return generateFallbackMessage(emotion);
+      return "Please configure the OpenRouter API URL in your environment variables.";
     }
 
     // Call the OpenRouter API with emotion data
@@ -52,55 +52,10 @@ export const processEmotionWithOpenRouter = async (
     }
 
     const data: OpenRouterResponse = await response.json();
-    return data.calmingMessage || generateFallbackMessage(emotion);
+    return data.calmingMessage || "No response from LLM.";
 
   } catch (error) {
     console.error('Error processing emotion with OpenRouter:', error);
-    return generateFallbackMessage(emotion);
+    return "Error connecting to OpenRouter. Please try again later.";
   }
-};
-
-// Fallback message generator if OpenRouter is not available
-const generateFallbackMessage = (emotion: EmotionResult): string => {
-  const emotionLabel = emotion.label.toLowerCase();
-  const emotionIntensity = emotion.score > 0.7 ? 'strong' : 'moderate';
-
-  const messageTemplates = {
-    joy: [
-      'Your happiness is contagious! Keep embracing these positive moments.',
-      'What a wonderful feeling to experience! Cherish this joy.'
-    ],
-    sadness: [
-      'I hear you, and it\'s okay to feel this way. Take gentle care of yourself.',
-      'Remember that you\'re not alone in feeling this way. This too shall pass.'
-    ],
-    anger: [
-      'I understand you\'re feeling frustrated. Take a deep breath with me.',
-      'Your feelings are valid. Let\'s process this together.'
-    ],
-    fear: [
-      'You\'re brave for acknowledging your fears. Let\'s face them together.',
-      'Remember that courage isn\'t the absence of fear, but moving forward despite it.'
-    ],
-    surprise: [
-      'Life is full of unexpected moments! How are you processing this surprise?',
-      'Sometimes the unexpected can lead to wonderful discoveries.'
-    ],
-    love: [
-      'What a beautiful emotion to experience! Let it fill your heart.',
-      'Love has a way of making everything brighter. Embrace this feeling.'
-    ],
-    neutral: [
-      'Taking time to reflect is valuable. What\'s on your mind?',
-      'Sometimes a calm mind helps us see things more clearly.'
-    ]
-  };
-
-  const defaultMessages = [
-    'Thank you for sharing your feelings. You\'re doing great.',
-    'Every emotion has its purpose. You\'re handling this well.'
-  ];
-
-  const messages = messageTemplates[emotionLabel as keyof typeof messageTemplates] || defaultMessages;
-  return messages[emotionIntensity === 'strong' ? 0 : 1];
 };

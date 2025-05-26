@@ -1,143 +1,266 @@
-
+// src/lib/generateResponse.ts
 import { EmotionType, EmotionResult, ConversationMessage } from "../types";
+import { triggerEmotionalResponseWorkflow } from "./analyzeEmotion";
 
+// Keep existing OpenAI configuration as backup
 const RESPONSE_API_URL = "https://api.openai.com/v1/chat/completions";
-// This is just a placeholder API token - in a real app, this should be stored securely
-const RESPONSE_API_TOKEN = ""; 
+const RESPONSE_API_TOKEN = process.env.REACT_APP_OPENAI_API_KEY || ""; 
 
-// Fallback responses when the API fails
+// Enhanced fallback responses with Gen Alpha lingo when both N8N and OpenAI fail
 const getFallbackResponse = (
   emotion: EmotionType,
-  useGenZ: boolean = false,
-  previousEmotion?: string
+  useGenAlpha: boolean = false,
+  previousEmotion?: string,
+  emotionScore?: number
 ): string => {
-  const responseStyle = useGenZ ? "genZ" : "supportive";
+  const intensity = emotionScore && emotionScore > 0.8 ? "high" : emotionScore && emotionScore < 0.4 ? "low" : "moderate";
   
-  // Simple fallback responses when API is unavailable
-  if (useGenZ) {
-    // Gen Z style responses
+  if (useGenAlpha) {
+    // Gen Alpha style responses with skibidi, sigma, rizz, Ohio energy
     switch (emotion) {
       case "joy":
+        if (intensity === "high") {
+          return previousEmotion === "sadness"
+            ? "YOOO that's absolutely SIGMA behavior! Your mood just went from straight Ohio to maximum rizz! This glow up is giving main character energy! What caused this W transformation, fam? 🔥✨💪"
+            : "BRO you're literally radiating sigma energy rn! Your vibes are absolutely FIRE and giving main character! What's got you this hyped? That's some serious rizz right there! 😎🔥";
+        }
         return previousEmotion === "sadness"
-          ? "Yooo, look at this mood glow up! From sad to happy vibes! What changed?"
-          : "You're totally giving happy vibes rn! What's got you so hyped?";
+          ? "Ayy look at this comeback arc! From mid energy to absolutely based! That's some sigma mindset shift right there! What happened, chief? 🌟"
+          : "You're lowkey glowing with that positive energy! What's making you feel this fire? That's some good vibes, no cap! 🔥";
       
       case "sadness":
+        if (intensity === "high") {
+          return "Damn fam, I can feel you're really going through the Ohio arc rn. That's some heavy energy but your feelings are absolutely valid, no cap. You're not alone in this sigma journey, I got you fr. What's weighing on your mind? 💙🫂";
+        }
         return previousEmotion === "joy"
-          ? "Dang, your mood just switched up. Everything good?"
-          : "Seems like you're in your feels. Wanna talk about it?";
+          ? "Your energy switched up from W to L real quick but that's just life being sus sometimes, frfr. Emotions be wild like that. What happened to change the vibe? 💙"
+          : "I see you're in your feels rn and that's totally valid energy. Sometimes we gotta feel those mid moments. What's on your mind, chief? 🫂";
       
       case "anger":
-        return "You're giving pressed energy. What's got you triggered?";
+        if (intensity === "high") {
+          return "YOOO you're absolutely PRESSED and giving unhinged energy rn but honestly? That rage is completely valid AF, no cap! Let's channel this sigma energy though. What got you this heated, fam? 🔥💢";
+        }
+        return "You seem lowkey triggered by something and that's giving some real energy right there. Wanna drop the tea about what's bothering your sigma mindset? I'm here to listen, chief 👀";
       
       case "fear":
-        return "Getting anxious vibes. No cap, what's stressing you out?";
+        if (intensity === "high") {
+          return "Bruh I can sense you're really struggling with anxiety rn and that's giving major Ohio vibes, but fr you're gonna make it through this. We got this together, sigma to sigma. What's scaring you most, fam? 🌸💚";
+        }
+        return "Getting some sus anxious vibes from you and anxiety is straight mid but you're not grinding alone in this. What's making you feel sketchy about things? 💭";
       
       case "surprise":
-        return "That's wild! You're shook, huh?";
+        return intensity === "high" 
+          ? "NO CAP you're absolutely SHOOK rn! That must've been some crazy plot twist giving main character energy! Drop the lore, what wild thing just happened?! 😱🔥"
+          : "Ooh something caught you completely off guard! That's giving unexpected sigma moment vibes! What's the story behind this? 👀";
       
       case "love":
-        return "You're catching feelings! Who's the main character in this story?";
+        return intensity === "high"
+          ? "BRO STOP IT you're literally radiating maximum rizz energy rn! This is giving absolute sigma romance arc and I'm here for it! Tell me about this person who's got you all soft, that's some wholesome energy! 💕✨"
+          : "Ayy you're catching feelings and that's some wholesome sigma energy right there! Love that vibe for you, chief. Who's got your heart feeling happy? 💕";
+      
+      case "excitement":
+        return intensity === "high"
+          ? "YOOO you're absolutely BUZZING with hype energy rn! That excitement is giving pure sigma vibes and I'm living for it! What's got you this amped up, fam? 🚀⚡"
+          : "You're giving excited energy and that's some good vibes right there! What's got you hyped up? 🎉";
+      
+      case "gratitude":
+        return "Aww that's some wholesome sigma energy right there! Gratitude is giving main character growth vibes. What's got you feeling blessed, chief? 🙏✨";
       
       case "neutral":
-        return previousEmotion ? "Seems like your vibe's evened out a bit. What's up?" : "Just chillin'? What's on your mind?";
+        return previousEmotion ? "Your energy seems to have leveled out to chill mode. You're giving balanced sigma vibes now, how you feeling fr?" : "Just vibing in neutral sigma mode? What's on your mindset today, fam? 💭";
       
       default:
-        return "Thanks for the update! No cap, I'm here to listen. Spill?";
+        return intensity === "high"
+          ? "I can feel the intensity of whatever you're going through rn and that's some real main character energy. Your feelings are absolutely valid, no cap, and I'm here for this whole arc 💜"
+          : "I'm here for whatever you're experiencing, chief. No judgment, just listening to your sigma journey. What's the situation? 💜";
     }
   } else {
-    // Regular supportive responses
+    // Regular supportive responses with intensity consideration
     switch (emotion) {
       case "joy":
+        if (intensity === "high") {
+          return previousEmotion === "sadness"
+            ? "What a beautiful transformation! I can feel the joy radiating from your message. It's wonderful to see you emerge from sadness into such happiness. What brought about this positive change?"
+            : "Your happiness is absolutely infectious! I can sense the deep joy you're experiencing. What's filling your heart with such wonderful feelings?";
+        }
         return previousEmotion === "sadness"
-          ? "I notice your mood has brightened! What helped turn things around?"
-          : "I see you're feeling positive! What's bringing you this happiness?";
+          ? "I notice your mood has brightened from earlier. What helped turn things around for you?"
+          : "I can sense your positive energy! What's bringing you this happiness?";
       
       case "sadness":
+        if (intensity === "high") {
+          return "I can feel the depth of sadness you're experiencing right now, and I want you to know that your pain is completely valid and important. You don't have to carry this burden alone. What's weighing most heavily on your heart?";
+        }
         return previousEmotion === "joy"
-          ? "I notice your mood has shifted. Would you like to talk about what changed?"
-          : "It sounds like you might be feeling down. I'm here if you want to talk about it.";
+          ? "I notice your mood has shifted from earlier happiness. That's completely normal - emotions can change throughout the day. Would you like to share what's affecting you?"
+          : "It sounds like you're going through something difficult. Your feelings are completely valid. I'm here to listen if you'd like to talk about it.";
       
       case "anger":
-        return "I sense some frustration in your message. Would you like to explore what's bothering you?";
+        if (intensity === "high") {
+          return "I can sense the intensity of your anger, and I want you to know that these feelings are completely valid. Strong emotions often signal that something important to you has been affected. What would help you feel heard and understood right now?";
+        }
+        return "I notice some frustration in your message. It's completely okay to feel angry - those emotions are telling you something important. Would you like to explore what's bothering you?";
       
       case "fear":
-        return "It seems like you might be feeling anxious about something. Would you like to talk about what's concerning you?";
+        if (intensity === "high") {
+          return "I can tell you're experiencing significant anxiety or fear right now, and that must feel overwhelming. It's completely understandable to feel this way. You're safe here, and we can work through this together. What's causing you the most worry?";
+        }
+        return "It seems like you might be feeling anxious or worried about something. Those feelings are completely natural and valid. What's on your mind?";
       
       case "surprise":
-        return "That sounds unexpected! How are you feeling about this surprise?";
+        return intensity === "high" 
+          ? "That must have been quite a shock! Big surprises can be overwhelming to process. How are you feeling about this unexpected development?"
+          : "That sounds unexpected! How are you processing this surprise?";
       
       case "love":
-        return "Those are warm feelings you're expressing. Would you like to share more about this connection?";
+        return intensity === "high"
+          ? "I can feel the warmth and depth of love in your message - it's truly beautiful. Those deep connections with others are one of life's greatest gifts. Would you like to share more about this special bond?"
+          : "I can sense the warmth and affection in your words. Those positive connections are so important. Would you like to share more?";
+      
+      case "excitement":
+        return intensity === "high"
+          ? "I can feel your excitement bubbling over! That energy is wonderful and contagious. What's got you so thrilled?"
+          : "You seem excited about something! I'd love to hear what's got you feeling so enthusiastic.";
+      
+      case "gratitude":
+        return "I can sense the gratitude in your message, and that's truly heartwarming. Appreciation is such a beautiful emotion. What's brought this feeling of thankfulness to you?";
       
       case "neutral":
-        return previousEmotion ? "Your mood seems to have balanced out. How are you feeling now?" : "How are things going for you today?";
+        return previousEmotion ? "Your emotions seem to have found a balance now. How are you feeling overall?" : "How are things going for you today? I'm here to listen to whatever's on your mind.";
       
       default:
-        return "Thank you for sharing. I'm here to listen whenever you need someone to talk to.";
+        return intensity === "high"
+          ? "I can sense you're experiencing something quite intense right now. Whatever you're going through, your feelings are valid and important. I'm here to support you through this."
+          : "Thank you for sharing with me. Whatever you're experiencing, I'm here to listen and support you through it.";
     }
   }
 };
 
+// Main function that prioritizes N8N workflow with enhanced error handling
 export const generateResponse = async (
   userMessage: string,
   emotionResult: EmotionResult,
-  useGenZ: boolean = false,
+  useGenAlpha: boolean = false,
   previousEmotion?: string,
   conversationHistory: ConversationMessage[] = []
 ): Promise<string> => {
   try {
-    // Skip API call if no token is provided and use fallback response
-    if (!RESPONSE_API_TOKEN) {
-      throw new Error("No API token provided");
-    }
-
-    const style = useGenZ ? "Gen Z style (using slang like 'bestie', 'vibes', 'no cap', etc.)" : "supportive and empathetic";
-    const emotionContext = previousEmotion && previousEmotion !== emotionResult.label 
-      ? `The user's emotion has shifted from ${previousEmotion} to ${emotionResult.label}.` 
-      : `The user is expressing ${emotionResult.label}.`;
+    // First, try the N8N workflow
+    console.log("Attempting to use N8N workflow for response generation...");
+    const n8nResult = await triggerEmotionalResponseWorkflow(
+      userMessage,
+      emotionResult,
+      useGenAlpha,
+      previousEmotion,
+      conversationHistory
+    );
     
-    // Build conversation history for context
-    const messages = [
-      {
-        role: "system",
-        content: `You are an emotionally intelligent AI assistant that responds to users in a ${style}. ${emotionContext} Respond to the user in a way that acknowledges their emotional state and encourages further conversation. Keep responses concise (1-3 short sentences).`
-      },
-      ...conversationHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      {
-        role: "user",
-        content: userMessage
-      }
-    ];
-
-    const response = await fetch(RESPONSE_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESPONSE_API_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo", // Or any other appropriate model
-        messages: messages,
-        max_tokens: 150,
-        temperature: 0.7,
-      }),
-      signal: AbortSignal.timeout(5000)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Response API request failed with status: ${response.status}`);
+    if (n8nResult.source === 'n8n_workflow' && n8nResult.response) {
+      console.log("Successfully generated response using N8N workflow");
+      return n8nResult.response;
     }
-
-    const data = await response.json();
-    return data.choices[0].message.content.trim();
+    
+    console.log("N8N workflow did not return a successful response, checking fallback options...");
+    
+    // If N8N workflow failed but returned a fallback, use it
+    if (n8nResult.source === 'local_fallback' && n8nResult.response) {
+      console.log("Using N8N local fallback response");
+      return n8nResult.response;
+    }
+    
+    // If N8N workflow failed completely, try OpenAI if token is available
+    if (RESPONSE_API_TOKEN) {
+      console.log("N8N workflow failed, attempting OpenAI fallback...");
+      return await generateOpenAIResponse(userMessage, emotionResult, useGenAlpha, previousEmotion, conversationHistory);
+    }
+    
+    // If both N8N and OpenAI are unavailable, use enhanced local fallback
+    console.log("Using enhanced local fallback response");
+    return getFallbackResponse(emotionResult.label as EmotionType, useGenAlpha, previousEmotion, emotionResult.score);
     
   } catch (error) {
-    console.error("Error generating response, using fallback:", error);
-    // Use fallback response if API fails
-    return getFallbackResponse(emotionResult.label as EmotionType, useGenZ, previousEmotion);
+    console.error("Error in generateResponse:", error);
+    
+    // Final fallback with error context
+    return getFallbackResponse(emotionResult.label as EmotionType, useGenAlpha, previousEmotion, emotionResult.score);
   }
+};
+
+// Enhanced OpenAI function for fallback with Gen Alpha awareness
+const generateOpenAIResponse = async (
+  userMessage: string,
+  emotionResult: EmotionResult,
+  useGenAlpha: boolean = false,
+  previousEmotion?: string,
+  conversationHistory: ConversationMessage[] = []
+): Promise<string> => {
+  const style = useGenAlpha 
+    ? "Gen Alpha style (using modern slang like 'sigma', 'rizz', 'Ohio', 'no cap', 'fam', 'chief', 'based', etc. Be supportive but use this contemporary language)" 
+    : "supportive and empathetic";
+  
+  const emotionContext = previousEmotion && previousEmotion !== emotionResult.label 
+    ? `The user's emotion has shifted from ${previousEmotion} to ${emotionResult.label}.` 
+    : `The user is expressing ${emotionResult.label}.`;
+  
+  const intensityContext = emotionResult.score > 0.8 
+    ? "The emotion is very intense." 
+    : emotionResult.score < 0.4 
+    ? "The emotion is subtle." 
+    : "The emotion is moderate.";
+  
+  // Build conversation history for context
+  const messages = [
+    {
+      role: "system",
+      content: `You are an emotionally intelligent AI assistant that responds to users in a ${style}. ${emotionContext} ${intensityContext} 
+
+Key guidelines:
+- Acknowledge their emotional state authentically
+- ${useGenAlpha ? "Use Gen Alpha slang naturally but remain supportive and caring" : "Use empathetic, supportive language"}
+- Encourage further conversation
+- Keep responses concise (1-3 sentences)
+- Focus on emotional support and validation
+- Ask open-ended questions to help them process their feelings
+
+Respond in a way that makes them feel heard and understood.`
+    },
+    ...conversationHistory.slice(-3).map(msg => ({
+      role: msg.role,
+      content: msg.content
+    })),
+    {
+      role: "user",
+      content: userMessage
+    }
+  ];
+
+  const response = await fetch(RESPONSE_API_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${RESPONSE_API_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "gpt-3.5-turbo",
+      messages: messages,
+      max_tokens: 150,
+      temperature: 0.7,
+      presence_penalty: 0.3,
+      frequency_penalty: 0.3
+    }),
+    signal: AbortSignal.timeout(8000)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API request failed with status: ${response.status}. Error: ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    throw new Error("Invalid response format from OpenAI API");
+  }
+  
+  return data.choices[0].message.content.trim();
 };

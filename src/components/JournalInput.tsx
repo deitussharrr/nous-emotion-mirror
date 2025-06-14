@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import NoteEmotionGraph from '@/components/NoteEmotionGraph';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { processEmotionWithOpenRouter } from '@/lib/api/n8nService';
+import { generateSupportiveMessageWithGroqLlama8b } from "@/lib/generateResponse";
 
 interface JournalInputProps {
   onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;
@@ -89,31 +89,40 @@ const JournalInput: React.FC<JournalInputProps> = ({
   // Get comforting message based on the last message emotion
   const [calmingMessage, setCalmingMessage] = useState<string | null>(null);
 
+  // NEW: Therapist reflection via Groq Llama 8B
   useEffect(() => {
-    const fetchCalmingMessage = async () => {
+    const fetchTherapistMessage = async () => {
       if (!existingMessages || existingMessages.length === 0) return;
-      let userNeedsToShareMore = true;
-      const contextMessages = existingMessages.map(msg => msg.content).join(' ');
-      while (userNeedsToShareMore) {
-        for (let i = existingMessages.length - 1; i >= 0; i--) {
-          const message = existingMessages[i];
-          if (message.emotion) {
-            const response = await processEmotionWithOpenRouter(
-              contextMessages,
-              message.emotion,
-              activeNoteId || 'temp',
-              'google/gemma-3-4b-it:free' // Ensure the new LLM model is used
-            );
-            setCalmingMessage(response);
-            userNeedsToShareMore = response.includes('Can you elaborate on that?') || response.includes('Tell me more about how you\'re feeling.');
-            break;
+      // Find the most recent user message with analyzed emotions 
+      for (let i = existingMessages.length - 1; i >= 0; i--) {
+        const msg = existingMessages[i];
+        // Check standard GoEmotions detection format
+        if (msg.emotion && (msg.emotion.emotions || msg.emotion.label)) {
+          let emotionLabels: string[] = [];
+          if (Array.isArray(msg.emotion.emotions)) {
+            // Sort by score, take top 4
+            emotionLabels = msg.emotion.emotions
+              .slice()
+              .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+              .map(e => e.label)
+              .filter(Boolean)
+              .slice(0, 4);
+          } else if (msg.emotion.label) {
+            emotionLabels = [msg.emotion.label];
+          }
+          if (emotionLabels.length > 0) {
+            setCalmingMessage("Reflecting on your message...");
+            const therapistMsg = await generateSupportiveMessageWithGroqLlama8b(emotionLabels);
+            setCalmingMessage(therapistMsg);
+            return;
           }
         }
       }
+      setCalmingMessage(null);
     };
 
-    fetchCalmingMessage();
-  }, [existingMessages, activeNoteId]);
+    fetchTherapistMessage();
+  }, [existingMessages]);
 
   const renderComfortingMessage = () => {
     if (!calmingMessage) return null;

@@ -264,3 +264,70 @@ Respond in a way that makes them feel heard and understood.`
   
   return data.choices[0].message.content.trim();
 };
+
+/**
+ * Generates a therapist-style supportive message using Groq's Llama-8B-8192 model
+ * @param emotionLabels  Array of the top N detected GoEmotions labels (strings)
+ * @returns Therapist-style supportive message (string)
+ */
+export async function generateSupportiveMessageWithGroqLlama8b(
+  emotionLabels: string[]
+): Promise<string> {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) {
+    console.error("VITE_GROQ_API_KEY is not set.");
+    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+  }
+
+  // Construct the system and user message as specified
+  const systemPrompt = `You are a compassionate, emotionally intelligent therapist.
+
+Given a list of emotions from the GoEmotions taxonomy, respond with a single, short therapist-style message (1–3 sentences) that:
+- Acknowledges the person’s emotional experience
+- Validates their feelings without naming them directly
+- Offers gentle support, safety, and presence
+- Uses calm, non-judgmental language
+- Does NOT list or mention the emotion names
+- Does NOT try to fix or analyze—just reflect and support
+
+Emotion labels (for reference only):
+admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral
+`;
+
+  const userPrompt = `input: [${emotionLabels.map(e => `"${e}"`).join(", ")}]\noutput:`;
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "llama3-8b-8192",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 100,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("Groq API error:", err);
+    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+  }
+
+  const data = await response.json();
+  // The API should return the text in data.choices[0].message.content
+  const msg = (data?.choices && data.choices[0]?.message?.content) ? data.choices[0].message.content.trim() : null;
+  if (!msg) {
+    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+  }
+  // Groq may sometimes return: output: "message" pattern
+  const match = msg.match(/^"?output\s*:\s*["“”']?(.*)["“”']?$/i);
+  if (match) return match[1].replace(/^["“”']|["“”']$/g, "");
+  if (msg.startsWith('"') && msg.endsWith('"')) return msg.slice(1, -1);
+  return msg;
+}

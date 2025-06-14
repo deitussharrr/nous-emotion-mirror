@@ -1,10 +1,10 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType } from "../types";
 
-// Updated with the boltuix/bert-emotion model
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/boltuix/bert-emotion";
+// Updated with the bhadresh-savani/bert-base-uncased-emotion model
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
 // NOTE: Make sure to set a valid Hugging Face API Key in the code below!
-const API_KEY = "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"; // <-- Updated with your provided Hugging Face API Key!
+const API_KEY = "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"; // <-- Your provided Hugging Face API Key!
 
 // N8N Workflow Configuration - Updated URL
 const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
@@ -86,14 +86,14 @@ export const analyzeEmotion = async (text: string) => {
       console.error(`[EmotionAnalysis] API request failed with status: ${response.status}. Response: ${errorText}`);
       throw new Error(
         `Emotion API error (status ${response.status}): ${errorText}.
-        ⚠️ Double check your Hugging Face API key and the boltuix/bert-emotion model availability at https://huggingface.co/boltuix/bert-emotion ⚠️`
+        ⚠️ Double check your Hugging Face API key and the bhadresh-savani/bert-base-uncased-emotion model availability at https://huggingface.co/bhadresh-savani/bert-base-uncased-emotion ⚠️`
       );
     }
 
     const data = await response.json();
     console.log("[EmotionAnalysis] Raw API data:", data);
 
-    // The expected output from boltuix/bert-emotion is:
+    // The expected output from bhadresh-savani/bert-base-uncased-emotion is:
     // [
     //   [
     //     { "label": "sadness", "score": 0.98 },

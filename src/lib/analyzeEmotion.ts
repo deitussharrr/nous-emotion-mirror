@@ -5,7 +5,7 @@ import { EmotionType } from "../types";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Chutes API configuration
-const CHUTES_API_URL = "https://api.chutes.ai/v1/chat/completions";
+const CHUTES_API_URL = "https://llm.chutes.ai/v1/chat/completions";
 const CHUTES_API_KEY = "cpk_6cc5756cabc34038a5417bbd7d6801dc.bba497ff4f965c809d1d09d8190879f0.sqFWDWaRytvtGqMiYFR0XU0v7NQIy1hH";
 
 // GoEmotions model emotions mapping (28 emotions)
@@ -107,7 +107,7 @@ CRITICAL RULES:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-4-maverick-17b-128e-instruct-fp8",
+        model: "chutesai/Llama-4-Maverick-17B-128E-Instruct-FP8",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: text }
@@ -118,7 +118,8 @@ CRITICAL RULES:
     });
 
     if (!response.ok) {
-      throw new Error(`Chutes API error: ${response.status}`);
+      const body = await response.text();
+      throw new Error(`Chutes API error: ${response.status}\n${body}`);
     }
 
     const result = await response.json();

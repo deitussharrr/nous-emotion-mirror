@@ -9,7 +9,7 @@ const API_KEY = "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";
 const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
 
 export const getEmotionColor = (emotion: EmotionType): string => {
-  // Extended color palette for raw emotions
+  // Extended color palette for raw emotions including "distress"
   switch (emotion) {
     case "joy": return "#FFD43B";
     case "sadness": return "#5C7CFA";
@@ -39,11 +39,33 @@ export const getEmotionColor = (emotion: EmotionType): string => {
     case "realization": return "#80DEEA";
     case "relief": return "#B2DFDB";
     case "remorse": return "#BCAAA4";
+    case "distress": return "#D72638"; // Bright red for distress/emergency
     default: return "#7f5af0";
   }
 };
 
 export const analyzeEmotion = async (text: string) => {
+  // --- 1. Explicit check for suicidal ideation / self-harm ---
+  const distressPhrases = [
+    "kill myself", "end my life", "suicide", "die by suicide",
+    "want to die", "don't want to live", "hurt myself", "self-harm", "cut myself", "take my own life",
+    "no reason to live", "can't go on", "don't want to be here", "wish i were dead",
+    "life isn't worth living", "give up on life", "i want to die", "i'm done with life"
+  ];
+  const lowerText = text.toLowerCase();
+
+  if (distressPhrases.some(phrase => lowerText.includes(phrase))) {
+    // Return special distress emotion
+    return {
+      label: "distress",
+      score: 1.0,
+      color: getEmotionColor("distress"),
+      emotions: [{ label: "distress", score: 1.0 }],
+      flagged: true,
+      isCrisis: true
+    };
+  }
+
   try {
     const response = await fetch(EMOTION_API_URL, {
       method: "POST",
@@ -95,11 +117,9 @@ export const analyzeEmotion = async (text: string) => {
     console.error("Error analyzing emotion:", error);
 
     // Fallback to basic sentiment analysis
-    const lowerText = text.toLowerCase();
     let fallbackEmotion: EmotionType = "neutral";
     let fallbackScore = 0.5;
 
-    // Simple keyword-based emotion detection as fallback
     if (lowerText.includes("happy") || lowerText.includes("joy") || lowerText.includes("excited")) {
       fallbackEmotion = "joy";
       fallbackScore = 0.7;

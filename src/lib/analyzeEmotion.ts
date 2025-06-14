@@ -1,11 +1,11 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType } from "../types";
 
-// Updated with a public model without token requirement
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/SamLowe/roberta-base-go_emotions";
+// Updated with the new HuggingFace model endpoint
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/codewithdark/bert-Gomotions";
 const API_KEY = "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";
 
-// N8N Workflow Configuration - Updated URL
+// N8N Workflow Configuration - URL stays the same
 const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
 
 export const getEmotionColor = (emotion: EmotionType): string => {
@@ -59,35 +59,38 @@ export const analyzeEmotion = async (text: string) => {
     }
 
     const data = await response.json();
-    
-    // Direct use of model output
+
+    // The codewithdark/bert-Gomotions model outputs the same array-of-labels format as most GoEmotions models.
+    // [{"label": "joy", "score": 0.95}, ...]
     if (Array.isArray(data) && data.length > 0) {
-      // Get all emotions from the results
-      const emotions = data[0];
+      const emotions = data[0] || data; // Some models wrap in an array of arrays, others just an array
+      // If "emotions" is an array of objects with label/score, use directly. 
+      // Newer HF models may just give data as the array, so check for both structures.
+      const emotionList = Array.isArray(emotions) ? emotions : data;
       
       // Log all detected emotions
-      console.log("All detected emotions:", emotions);
-      
+      console.log("All detected emotions:", emotionList);
+
       // Get the top emotion
-      const topEmotion = emotions.reduce((prev: any, curr: any) => {
+      const topEmotion = emotionList.reduce((prev: any, curr: any) => {
         return prev.score > curr.score ? prev : curr;
       });
-      
+
       console.log("Top emotion:", topEmotion.label, "with score:", topEmotion.score);
-      
+
       return {
         label: topEmotion.label as EmotionType,
         score: topEmotion.score,
         color: getEmotionColor(topEmotion.label as EmotionType),
-        emotions: emotions // Return all emotions for reference
+        emotions: emotionList // Return all emotions for reference
       };
     }
-    
+
     throw new Error("Invalid response format from emotion API");
-    
+
   } catch (error) {
     console.error("Error analyzing emotion:", error);
-    
+
     // Fallback to basic sentiment analysis
     const lowerText = text.toLowerCase();
     let fallbackEmotion: EmotionType = "neutral";

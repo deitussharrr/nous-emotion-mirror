@@ -45,20 +45,19 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
 
   return (
     <div className="w-full p-4 rounded-lg bg-white/5 border border-white/10 mt-4 animate-fade-in">
-      <div className="flex gap-3">
+      <div className="flex flex-col items-center justify-center gap-3 min-h-[72px]">
         <div 
-          className="h-10 w-10 rounded-full flex items-center justify-center"
+          className="h-14 w-14 rounded-full flex items-center justify-center"
           style={{ backgroundColor: `${color}30` }}
         >
-          <span className="text-lg">{emoji}</span>
+          <span className="text-2xl">{emoji}</span>
         </div>
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-1">
-            <h3 className="text-sm font-medium capitalize" style={{ color }}>
-              {label}
-            </h3>
-          </div>
-        </div>
+        <h3 
+          className="text-base font-semibold capitalize"
+          style={{ color }}
+        >
+          {label}
+        </h3>
       </div>
     </div>
   );

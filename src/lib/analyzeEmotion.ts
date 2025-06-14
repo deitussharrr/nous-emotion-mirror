@@ -3,7 +3,8 @@ import { EmotionType } from "../types";
 
 // Updated with the boltuix/bert-emotion model
 const EMOTION_API_URL = "https://api-inference.huggingface.co/models/boltuix/bert-emotion";
-const API_KEY = "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";
+// NOTE: Make sure to set a valid Hugging Face API Key in the code below!
+const API_KEY = "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"; // <-- Check this key and renew if needed!
 
 // N8N Workflow Configuration - Updated URL
 const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
@@ -67,20 +68,30 @@ export const analyzeEmotion = async (text: string) => {
   }
 
   try {
+    console.log("[EmotionAnalysis] Sending request to:", EMOTION_API_URL);
     const response = await fetch(EMOTION_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
+        "Authorization": `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({ inputs: text }),
     });
 
+    console.log("[EmotionAnalysis] API Response status:", response.status);
+
     if (!response.ok) {
-      throw new Error(`API request failed with status: ${response.status}`);
+      const errorText = await response.text();
+      // Add more context for debugging
+      console.error(`[EmotionAnalysis] API request failed with status: ${response.status}. Response: ${errorText}`);
+      throw new Error(
+        `Emotion API error (status ${response.status}): ${errorText}.
+        ⚠️ Double check your Hugging Face API key and the boltuix/bert-emotion model availability at https://huggingface.co/boltuix/bert-emotion ⚠️`
+      );
     }
 
     const data = await response.json();
+    console.log("[EmotionAnalysis] Raw API data:", data);
 
     // The expected output from boltuix/bert-emotion is:
     // [
@@ -111,7 +122,7 @@ export const analyzeEmotion = async (text: string) => {
       };
     }
 
-    throw new Error("Invalid response format from emotion API");
+    throw new Error("[EmotionAnalysis] Invalid response format from emotion API");
 
   } catch (error) {
     console.error("Error analyzing emotion:", error);

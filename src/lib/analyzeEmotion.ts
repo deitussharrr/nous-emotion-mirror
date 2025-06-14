@@ -1,12 +1,15 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType } from "../types";
-import { pipeline } from "@huggingface/transformers";
 
 // Groq Llama-3 API endpoint and key for response generation only
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// BERT model emotions mapping (based on codewithdark/bert-Gomotions)
-const BERT_EMOTION_MAPPING: Record<string, EmotionType> = {
+// Hugging Face API configuration
+const HF_API_URL = "https://api-inference.huggingface.co/models/monologg/bert-base-cased-goemotions-original";
+const HF_API_KEY = "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";
+
+// GoEmotions model emotions mapping (based on monologg/bert-base-cased-goemotions-original)
+const GOEMOTIONS_MAPPING: Record<string, EmotionType> = {
   'admiration': 'admiration',
   'amusement': 'amusement', 
   'anger': 'anger',
@@ -76,48 +79,40 @@ export const getEmotionColor = (emotion: EmotionType): string => {
 // N8N workflow URL
 const N8N_WORKFLOW_URL = import.meta.env.VITE_N8N_WORKFLOW_URL || "";
 
-// Initialize BERT emotion classifier
-let emotionClassifier: any = null;
-
-const initializeEmotionClassifier = async () => {
-  if (!emotionClassifier) {
-    try {
-      emotionClassifier = await pipeline(
-        'text-classification',
-        'codewithdark/bert-Gomotions',
-        { device: 'webgpu' }
-      );
-      console.log('BERT emotion classifier initialized successfully');
-    } catch (error) {
-      console.warn('Failed to initialize with WebGPU, falling back to CPU:', error);
-      emotionClassifier = await pipeline(
-        'text-classification', 
-        'codewithdark/bert-Gomotions'
-      );
-    }
-  }
-  return emotionClassifier;
-};
-
-// Use BERT for emotion analysis
+// Use Hugging Face Inference API for emotion analysis
 export const analyzeEmotion = async (text: string) => {
   try {
-    console.log('Analyzing emotion with BERT model:', text);
+    console.log('Analyzing emotion with Hugging Face GoEmotions model:', text);
     
-    // Initialize and use BERT classifier
-    const classifier = await initializeEmotionClassifier();
-    const results = await classifier(text);
+    const response = await fetch(HF_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${HF_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        inputs: text,
+        options: {
+          wait_for_model: true
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Hugging Face API error: ${response.status}`);
+    }
+
+    const results = await response.json();
+    console.log('Hugging Face emotion results:', results);
     
-    console.log('BERT emotion results:', results);
-    
-    // Convert BERT results to our format
-    const allEmotions = Object.keys(BERT_EMOTION_MAPPING).map(emotion => {
-      const bertResult = results.find((r: any) => 
+    // Convert HF results to our format
+    const allEmotions = Object.keys(GOEMOTIONS_MAPPING).map(emotion => {
+      const hfResult = results.find((r: any) => 
         r.label.toLowerCase() === emotion.toLowerCase()
       );
       return {
         label: emotion as EmotionType,
-        score: bertResult ? bertResult.score : 0
+        score: hfResult ? hfResult.score : 0
       };
     });
     
@@ -148,7 +143,7 @@ export const analyzeEmotion = async (text: string) => {
     };
     
   } catch (error) {
-    console.error('Error analyzing emotion with BERT:', error);
+    console.error('Error analyzing emotion with Hugging Face:', error);
     
     // Fallback to basic sentiment
     const lowerText = text.toLowerCase();

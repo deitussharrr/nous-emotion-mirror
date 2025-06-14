@@ -1,17 +1,41 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType } from "../types";
+import { pipeline } from "@huggingface/transformers";
 
-// Groq Llama-3 API endpoint and key
+// Groq Llama-3 API endpoint and key for response generation only
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// List of allowed 28 emotions (added "neutral")
-const EMOTION_LABELS: EmotionType[] = [
-  'admiration', 'amusement', 'anger', 'annoyance', 'approval',
-  'caring', 'confusion', 'curiosity', 'desire', 'disappointment',
-  'disapproval', 'disgust', 'embarrassment', 'excitement', 'fear',
-  'gratitude', 'grief', 'joy', 'love', 'nervousness', 'neutral',
-  'optimism', 'pride', 'realization', 'relief', 'remorse', 'sadness', 'surprise'
-];
+// BERT model emotions mapping (based on codewithdark/bert-Gomotions)
+const BERT_EMOTION_MAPPING: Record<string, EmotionType> = {
+  'admiration': 'admiration',
+  'amusement': 'amusement', 
+  'anger': 'anger',
+  'annoyance': 'annoyance',
+  'approval': 'approval',
+  'caring': 'caring',
+  'confusion': 'confusion',
+  'curiosity': 'curiosity',
+  'desire': 'desire',
+  'disappointment': 'disappointment',
+  'disapproval': 'disapproval',
+  'disgust': 'disgust',
+  'embarrassment': 'embarrassment',
+  'excitement': 'excitement',
+  'fear': 'fear',
+  'gratitude': 'gratitude',
+  'grief': 'grief',
+  'joy': 'joy',
+  'love': 'love',
+  'nervousness': 'nervousness',
+  'neutral': 'neutral',
+  'optimism': 'optimism',
+  'pride': 'pride',
+  'realization': 'realization',
+  'relief': 'relief',
+  'remorse': 'remorse',
+  'sadness': 'sadness',
+  'surprise': 'surprise'
+};
 
 // Helper: emotion color (keep same)
 export const getEmotionColor = (emotion: EmotionType): string => {
@@ -49,128 +73,88 @@ export const getEmotionColor = (emotion: EmotionType): string => {
   }
 };
 
-// Add to top (after GROQ_API_URL), define the N8N_WORKFLOW_URL with env variable fallback
+// N8N workflow URL
 const N8N_WORKFLOW_URL = import.meta.env.VITE_N8N_WORKFLOW_URL || "";
 
-// Use Llama-3 for emotion analysis
+// Initialize BERT emotion classifier
+let emotionClassifier: any = null;
+
+const initializeEmotionClassifier = async () => {
+  if (!emotionClassifier) {
+    try {
+      emotionClassifier = await pipeline(
+        'text-classification',
+        'codewithdark/bert-Gomotions',
+        { device: 'webgpu' }
+      );
+      console.log('BERT emotion classifier initialized successfully');
+    } catch (error) {
+      console.warn('Failed to initialize with WebGPU, falling back to CPU:', error);
+      emotionClassifier = await pipeline(
+        'text-classification', 
+        'codewithdark/bert-Gomotions'
+      );
+    }
+  }
+  return emotionClassifier;
+};
+
+// Use BERT for emotion analysis
 export const analyzeEmotion = async (text: string) => {
   try {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-    if (!apiKey) throw new Error("Groq API key is missing!");
-
-    // ---- UPDATED SYSTEM PROMPT (28 emotions, better nuance) ----
-    const systemPrompt = `You are an advanced Emotion Analysis AI trained to detect complex emotional states in human text.
-
-Your task is to return a JSON object showing the percentage distribution of emotions present in the input text.
-
-There are exactly 28 possible emotions. These are:
-
-["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "neutral", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise"]
-
-CRITICAL RULES:
-1. Your output MUST be a JSON object with exactly 28 keys, one for each of the above emotions.
-2. Each emotion must map to a percentage value between 0.0 and 100.0 (float or integer).
-3. The sum of ALL emotion percentages MUST be exactly 100.0.
-4. At least two emotions must be greater than 0.0 — avoid single-emotion outputs.
-5. Think in terms of emotional nuance, subtext, and co-occurring feelings — not just obvious keywords.
-6. Do NOT include any explanation, commentary, or markdown formatting. Output ONLY the JSON.`;
-
-    const userPrompt = `Text: """${text}"""\n\nEmotion classification (json):`;
-
-    const response = await fetch(GROQ_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "mixtral-8x7b-32768",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        max_tokens: 512,
-        temperature: 0.0
-      }),
+    console.log('Analyzing emotion with BERT model:', text);
+    
+    // Initialize and use BERT classifier
+    const classifier = await initializeEmotionClassifier();
+    const results = await classifier(text);
+    
+    console.log('BERT emotion results:', results);
+    
+    // Convert BERT results to our format
+    const allEmotions = Object.keys(BERT_EMOTION_MAPPING).map(emotion => {
+      const bertResult = results.find((r: any) => 
+        r.label.toLowerCase() === emotion.toLowerCase()
+      );
+      return {
+        label: emotion as EmotionType,
+        score: bertResult ? bertResult.score : 0
+      };
     });
-
-    if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
-
-    const data = await response.json();
-    const content: string =
-      data.choices &&
-      data.choices[0] &&
-      data.choices[0].message &&
-      data.choices[0].message.content;
-    if (!content) throw new Error("No result from Groq emotion analysis");
-
-    // Try to extract JSON from Llama output
-    let emotionsObj: Record<string, number> | null = null;
-    try {
-      const jsonStr = content.replace(/.*?({.*}).*/s, "$1"); // extract first {...}
-      emotionsObj = JSON.parse(jsonStr);
-      console.log("Raw Llama-3 output:", content);
-      console.log("Parsed emotions object:", emotionsObj);
-
-      // Defensive: Check all keys present (now 28 emotions)
-      if (
-        Object.keys(emotionsObj).length !== EMOTION_LABELS.length ||
-        !EMOTION_LABELS.every(k => Object.prototype.hasOwnProperty.call(emotionsObj, k))
-      ) {
-        throw new Error(`Expected all 28 emotions. Got: ${Object.keys(emotionsObj).join(", ")}`);
-      }
-      
-      // NORMALIZE TO ENSURE SUM = 100
-      const values = Object.values(emotionsObj);
-      const currentSum = values.reduce((a, b) => a + Number(b), 0);
-      
-      if (currentSum === 0) {
-        // If all zeros, set neutral to 100
-        emotionsObj = Object.fromEntries(
-          EMOTION_LABELS.map(label => [label, label === "neutral" ? 100 : 0])
-        );
-      } else if (Math.abs(currentSum - 100) > 0.1) {
-        // Normalize to sum to 100
-        const factor = 100 / currentSum;
-        emotionsObj = Object.fromEntries(
-          EMOTION_LABELS.map(label => [label, Number(emotionsObj![label]) * factor])
-        );
-        console.log(`Normalized emotions from sum ${currentSum} to 100`);
-      }
-    } catch (err) {
-      console.error("Failed to parse Groq/Llama3 output:", content, err);
-      throw new Error("Could not parse emotions for this text.");
+    
+    // Normalize scores to sum to 1
+    const total = allEmotions.reduce((sum, emotion) => sum + emotion.score, 0);
+    if (total > 0) {
+      allEmotions.forEach(emotion => {
+        emotion.score = emotion.score / total;
+      });
     }
-
-    // Convert to normalized format for component
-    const allEmotions = EMOTION_LABELS.map(label => {
-      const rawVal = emotionsObj![label] ?? 0;
-      const score: number = Math.max(0, Math.min(1, rawVal / 100));
-      return { label, score };
-    });
-
-    // Debug log normalized output
-    console.log("Normalized emotions array:", allEmotions);
-
-    // Pick top emotion
-    const topEmotion = allEmotions.reduce((prev, curr) => curr.score > prev.score ? curr : prev);
-
-    // Return format (output allEmotions so it can show % for each)
-    return {
-      label: topEmotion.label as EmotionType,
+    
+    // Find top emotion
+    const topEmotion = allEmotions.reduce((prev, curr) => 
+      curr.score > prev.score ? curr : prev
+    );
+    
+    console.log('Processed emotion data:', {
+      topEmotion: topEmotion.label,
       score: topEmotion.score,
-      color: getEmotionColor(topEmotion.label as EmotionType),
+      allEmotions
+    });
+    
+    return {
+      label: topEmotion.label,
+      score: topEmotion.score,
+      color: getEmotionColor(topEmotion.label),
       emotions: allEmotions
     };
+    
   } catch (error) {
-    console.error("Error analyzing emotion (Groq):", error);
-
-    // Fallback to basic sentiment if Llama fails
+    console.error('Error analyzing emotion with BERT:', error);
+    
+    // Fallback to basic sentiment
     const lowerText = text.toLowerCase();
     let fallbackEmotion: EmotionType = "neutral";
     let fallbackScore = 0.5;
     
-    // Simple keyword-based emotion detection as fallback
     if (lowerText.includes("happy") || lowerText.includes("joy") || lowerText.includes("excited")) {
       fallbackEmotion = "joy";
       fallbackScore = 0.7;
@@ -195,7 +179,7 @@ CRITICAL RULES:
   }
 };
 
-// N8N workflow trigger and fallback (unchanged)
+// Keep Mixtral for response generation
 export const triggerEmotionalResponseWorkflow = async (
   userMessage: string,
   emotionResult: any,
@@ -210,9 +194,8 @@ export const triggerEmotionalResponseWorkflow = async (
       emotionScore: emotionResult.score,
       useGenAlpha,
       previousEmotion,
-      conversationHistory: conversationHistory.slice(-5), // Only send last 5 messages for context
+      conversationHistory: conversationHistory.slice(-5),
       timestamp: new Date().toISOString(),
-      // Additional context for better analysis
       textLength: userMessage.length,
       allEmotions: emotionResult.emotions,
       emotionIntensity: emotionResult.score > 0.8 ? 'high' : emotionResult.score < 0.4 ? 'low' : 'moderate'
@@ -228,7 +211,7 @@ export const triggerEmotionalResponseWorkflow = async (
         "ngrok-skip-browser-warning": "true"
       },
       body: JSON.stringify(workflowPayload),
-      signal: AbortSignal.timeout(20000) // 20 second timeout for n8n workflow
+      signal: AbortSignal.timeout(20000)
     });
 
     if (!response.ok) {
@@ -252,24 +235,83 @@ export const triggerEmotionalResponseWorkflow = async (
   } catch (error) {
     console.error("Error triggering N8N workflow:", error);
     
-    // Return fallback response if N8N workflow fails
     return {
-      response: getLocalFallbackResponse(emotionResult.label, useGenAlpha, previousEmotion, emotionResult.score),
+      response: await getLocalFallbackResponseWithMixtral(emotionResult.label, useGenAlpha, previousEmotion, emotionResult.score, userMessage),
       metadata: {
         emotion: emotionResult.label,
         emotionScore: emotionResult.score,
-        source: 'local_fallback',
+        source: 'mixtral_fallback',
         timestamp: new Date().toISOString(),
         error: error.message
       },
-      source: 'local_fallback',
+      source: 'mixtral_fallback',
       error: error.message
     };
   }
 };
 
-// Enhanced local fallback response function with Gen Alpha lingo
-const getLocalFallbackResponse = (
+// Use Mixtral for generating responses when N8N fails
+const getLocalFallbackResponseWithMixtral = async (
+  emotion: EmotionType,
+  useGenAlpha: boolean = false,
+  previousEmotion?: string,
+  emotionScore?: number,
+  userMessage?: string
+): Promise<string> => {
+  try {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) {
+      return getStaticFallbackResponse(emotion, useGenAlpha, previousEmotion, emotionScore);
+    }
+
+    const intensity = emotionScore && emotionScore > 0.8 ? "high" : emotionScore && emotionScore < 0.4 ? "low" : "moderate";
+    const style = useGenAlpha ? "Gen Alpha slang (rizz, sigma, Ohio, skibidi, no cap, etc.)" : "warm and supportive";
+    
+    const systemPrompt = `You are an empathetic AI companion. Respond to the user's message in a ${style} style. 
+    
+    Context:
+    - Detected emotion: ${emotion} (${intensity} intensity)
+    - Previous emotion: ${previousEmotion || 'none'}
+    - User message: "${userMessage}"
+    
+    Keep your response conversational, supportive, and around 2-3 sentences.`;
+
+    const response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "mixtral-8x7b-32768",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage || `I'm feeling ${emotion}` }
+        ],
+        max_tokens: 150,
+        temperature: 0.7
+      }),
+    });
+
+    if (!response.ok) throw new Error('Mixtral API failed');
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    
+    if (content) {
+      return content.trim();
+    } else {
+      throw new Error('No content from Mixtral');
+    }
+    
+  } catch (error) {
+    console.error('Error getting Mixtral response:', error);
+    return getStaticFallbackResponse(emotion, useGenAlpha, previousEmotion, emotionScore);
+  }
+};
+
+// Static fallback when both N8N and Mixtral fail
+const getStaticFallbackResponse = (
   emotion: EmotionType,
   useGenAlpha: boolean = false,
   previousEmotion?: string,

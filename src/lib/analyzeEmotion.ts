@@ -4,13 +4,13 @@ import { EmotionType } from "../types";
 // Groq Llama-3 API endpoint and key
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// List of allowed 27 emotions
+// List of allowed 28 emotions (added "neutral")
 const EMOTION_LABELS: EmotionType[] = [
   'admiration', 'amusement', 'anger', 'annoyance', 'approval',
   'caring', 'confusion', 'curiosity', 'desire', 'disappointment',
   'disapproval', 'disgust', 'embarrassment', 'excitement', 'fear',
-  'gratitude', 'grief', 'joy', 'love', 'nervousness', 'optimism',
-  'pride', 'realization', 'relief', 'remorse', 'sadness', 'surprise'
+  'gratitude', 'grief', 'joy', 'love', 'nervousness', 'neutral',
+  'optimism', 'pride', 'realization', 'relief', 'remorse', 'sadness', 'surprise'
 ];
 
 // Helper: emotion color (keep same)
@@ -58,25 +58,22 @@ export const analyzeEmotion = async (text: string) => {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) throw new Error("Groq API key is missing!");
 
-    // ---- IMPROVED SYSTEM PROMPT (as per user specs) ----
-    const systemPrompt = `
-You are a caring, supportive therapist. Give empathetic, concise responses (2-3 sentences max). Acknowledge their feelings and offer gentle support. Never give medical advice.
+    // ---- UPDATED SYSTEM PROMPT (28 emotions, better nuance) ----
+    const systemPrompt = `You are an advanced Emotion Analysis AI trained to detect complex emotional states in human text.
 
-Your primary task:
-Given any journal text, ALWAYS return ONLY the following 27 emotions as a single pure JSON object. Each key is an emotion and each value is a number (percentage) showing how confident or accurate you are that the text expresses that emotion (0 means not present, 100 means fully confident). 
+Your task is to return a JSON object showing the percentage distribution of emotions present in the input text.
 
-BE EXPLICIT: Output object where each key is the emotion and each value is its confidence/accuracy as a percent (number from 0 to 100, decimals allowed). Mention "percent confident" for each by outputting keys exactly as required.
+There are exactly 28 possible emotions. These are:
 
-REQUIREMENTS for your output:
-- THE SUM OF ALL VALUES MUST ADD UP TO EXACTLY 100 (±0.1 due to rounding/tiny floats, but not above or below this).
-- At least one emotion must have a value > 0.
-- NEVER output all emotions as zero or leave any out. All 27 keys must be present.
-- Never add extra keys, change any key names, or write text outside the JSON.
-- Output ONLY valid, minified JSON (no explanations). Example:
-{"joy":44.3,"surprise":23.8,"sadness":10,"anger":8,"disgust":3.5,"fear":1,"love":5,"admiration":2,"amusement":2,"annoyance":0,"approval":0,"caring":0,"confusion":0,"curiosity":0,"desire":0,"disappointment":0,"disapproval":0,"embarrassment":0,"excitement":0,"gratitude":0,"grief":0,"nervousness":0,"optimism":0,"pride":0,"realization":0,"relief":0,"remorse":0}
-Required emotions: ${EMOTION_LABELS.join(", ")}.
-Output must start with '{' and end with '}'. Only output JSON.
-    `.trim();
+["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "neutral", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise"]
+
+CRITICAL RULES:
+1. Your output MUST be a JSON object with exactly 28 keys, one for each of the above emotions.
+2. Each emotion must map to a percentage value between 0.0 and 100.0 (float or integer).
+3. The sum of ALL emotion percentages MUST be exactly 100.0.
+4. At least two emotions must be greater than 0.0 — avoid single-emotion outputs.
+5. Think in terms of emotional nuance, subtext, and co-occurring feelings — not just obvious keywords.
+6. Do NOT include any explanation, commentary, or markdown formatting. Output ONLY the JSON.`;
 
     const userPrompt = `Text: """${text}"""\n\nEmotion classification (json):`;
 
@@ -115,43 +112,40 @@ Output must start with '{' and end with '}'. Only output JSON.
       console.log("Raw Llama-3 output:", content);
       console.log("Parsed emotions object:", emotionsObj);
 
-      // Defensive: Check all keys present
+      // Defensive: Check all keys present (now 28 emotions)
       if (
         Object.keys(emotionsObj).length !== EMOTION_LABELS.length ||
         !EMOTION_LABELS.every(k => Object.prototype.hasOwnProperty.call(emotionsObj, k))
       ) {
-        throw new Error(`Expected all 27 emotions. Got: ${Object.keys(emotionsObj).join(", ")}`);
+        throw new Error(`Expected all 28 emotions. Got: ${Object.keys(emotionsObj).join(", ")}`);
       }
-      // Defensive: Check that sum ~100 (with tolerance)
-      const total = Object.values(emotionsObj).reduce((a,b) => a + Number(b), 0);
-      if (Math.abs(total - 100) > 0.11) {
-        throw new Error(`Emotion percentages do not sum to 100. Actual sum: ${total}`);
+      
+      // NORMALIZE TO ENSURE SUM = 100
+      const values = Object.values(emotionsObj);
+      const currentSum = values.reduce((a, b) => a + Number(b), 0);
+      
+      if (currentSum === 0) {
+        // If all zeros, set neutral to 100
+        emotionsObj = Object.fromEntries(
+          EMOTION_LABELS.map(label => [label, label === "neutral" ? 100 : 0])
+        );
+      } else if (Math.abs(currentSum - 100) > 0.1) {
+        // Normalize to sum to 100
+        const factor = 100 / currentSum;
+        emotionsObj = Object.fromEntries(
+          EMOTION_LABELS.map(label => [label, Number(emotionsObj![label]) * factor])
+        );
+        console.log(`Normalized emotions from sum ${currentSum} to 100`);
       }
     } catch (err) {
       console.error("Failed to parse Groq/Llama3 output:", content, err);
       throw new Error("Could not parse emotions for this text.");
     }
 
-    // ---- ALL-ZEROES GUARD ----
-    const emotionNumbers = EMOTION_LABELS.map(label => Number(emotionsObj![label]) || 0);
-    // Defensive: sum and check all zeros
-    const sumOfValues = emotionNumbers.reduce((a, b) => a + b, 0);
-    const allZeros = emotionNumbers.every(v => v === 0);
-    if (allZeros) {
-      emotionsObj = Object.fromEntries(
-        EMOTION_LABELS.map(label =>
-          [label, label === "neutral" ? 100 : 0]
-        )
-      );
-      console.warn("Llama-3 returned all zeros; replaced with 100% neutral.");
-    }
-
-    // --- NORMALIZATION ---
-    // All values are between 0-100 by requirement
+    // Convert to normalized format for component
     const allEmotions = EMOTION_LABELS.map(label => {
       const rawVal = emotionsObj![label] ?? 0;
-      // Clamp and normalize to [0, 1]
-      let score: number = Math.max(0, Math.min(1, rawVal / 100));
+      const score: number = Math.max(0, Math.min(1, rawVal / 100));
       return { label, score };
     });
 

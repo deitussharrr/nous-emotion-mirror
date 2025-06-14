@@ -58,9 +58,6 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
             <h3 className="text-sm font-medium capitalize" style={{ color }}>
               {label}
             </h3>
-            <span className="text-xs text-nousText-muted">
-              {Math.round(score * 100)}% confident
-            </span>
           </div>
           {emotions && (
             <div className="mt-2">
@@ -95,6 +92,7 @@ function getEmotionEmoji(emotion: string): string {
     case "surprise": return "😲";
     case "love": return "❤️";
     case "neutral": return "😐";
+    case "distress": return "🚨";
     
     // Extended emotions
     case "admiration": return "🤩";

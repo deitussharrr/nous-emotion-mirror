@@ -23,7 +23,8 @@ export type EmotionType =
   | 'disapproval' | 'disgust' | 'embarrassment' | 'excitement' | 'fear' 
   | 'gratitude' | 'grief' | 'joy' | 'love' | 'nervousness' | 'optimism' 
   | 'pride' | 'realization' | 'relief' | 'remorse' | 'sadness' 
-  | 'surprise' | 'neutral';
+  | 'surprise' | 'neutral'
+  | 'distress'; // <-- Add "distress"
 
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';

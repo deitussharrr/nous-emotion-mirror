@@ -1,8 +1,8 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType } from "../types";
 
-// Updated with a public model without token requirement
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/SamLowe/roberta-base-go_emotions";
+// Updated with the boltuix/bert-emotion model
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/boltuix/bert-emotion";
 const API_KEY = "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";
 
 // N8N Workflow Configuration - Updated URL
@@ -59,22 +59,28 @@ export const analyzeEmotion = async (text: string) => {
     }
 
     const data = await response.json();
-    
-    // Direct use of model output
-    if (Array.isArray(data) && data.length > 0) {
-      // Get all emotions from the results
+
+    // The expected output from boltuix/bert-emotion is:
+    // [
+    //   [
+    //     { "label": "sadness", "score": 0.98 },
+    //     { "label": "joy", "score": 0.01 },
+    //     ...
+    //   ]
+    // ]
+    if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0])) {
       const emotions = data[0];
-      
+
       // Log all detected emotions
       console.log("All detected emotions:", emotions);
-      
+
       // Get the top emotion
       const topEmotion = emotions.reduce((prev: any, curr: any) => {
         return prev.score > curr.score ? prev : curr;
       });
-      
+
       console.log("Top emotion:", topEmotion.label, "with score:", topEmotion.score);
-      
+
       return {
         label: topEmotion.label as EmotionType,
         score: topEmotion.score,
@@ -82,17 +88,17 @@ export const analyzeEmotion = async (text: string) => {
         emotions: emotions // Return all emotions for reference
       };
     }
-    
+
     throw new Error("Invalid response format from emotion API");
-    
+
   } catch (error) {
     console.error("Error analyzing emotion:", error);
-    
+
     // Fallback to basic sentiment analysis
     const lowerText = text.toLowerCase();
     let fallbackEmotion: EmotionType = "neutral";
     let fallbackScore = 0.5;
-    
+
     // Simple keyword-based emotion detection as fallback
     if (lowerText.includes("happy") || lowerText.includes("joy") || lowerText.includes("excited")) {
       fallbackEmotion = "joy";
@@ -107,7 +113,7 @@ export const analyzeEmotion = async (text: string) => {
       fallbackEmotion = "fear";
       fallbackScore = 0.7;
     }
-    
+
     return {
       label: fallbackEmotion,
       score: fallbackScore,

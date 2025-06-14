@@ -46,6 +46,9 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
   return (
     <div className="w-full p-4 rounded-lg bg-white/5 border border-white/10 mt-4 animate-fade-in">
       <div className="flex flex-col items-center justify-center gap-3 min-h-[72px]">
+        <span className="text-xs text-nousText-muted mb-1 uppercase tracking-wide" style={{ letterSpacing: '0.06em' }}>
+          Current Emotion
+        </span>
         <div 
           className="h-14 w-14 rounded-full flex items-center justify-center"
           style={{ backgroundColor: `${color}30` }}

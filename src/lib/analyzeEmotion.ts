@@ -58,22 +58,24 @@ export const analyzeEmotion = async (text: string) => {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) throw new Error("Groq API key is missing!");
 
-    // ---- IMPROVED SYSTEM PROMPT ----
+    // ---- IMPROVED SYSTEM PROMPT (as per user specs) ----
     const systemPrompt = `
 You are a caring, supportive therapist. Give empathetic, concise responses (2-3 sentences max). Acknowledge their feelings and offer gentle support. Never give medical advice.
 
 Your primary task:
-Given any journal text, always return ONLY the following 27 emotions as a single pure JSON object where each key is an emotion and each value is its probability in percent (numbers 0–100, can use decimals).
+Given any journal text, ALWAYS return ONLY the following 27 emotions as a single pure JSON object. Each key is an emotion and each value is a number (percentage) showing how confident or accurate you are that the text expresses that emotion (0 means not present, 100 means fully confident). 
 
+BE EXPLICIT: Output object where each key is the emotion and each value is its confidence/accuracy as a percent (number from 0 to 100, decimals allowed). Mention "percent confident" for each by outputting keys exactly as required.
+
+REQUIREMENTS for your output:
+- THE SUM OF ALL VALUES MUST ADD UP TO EXACTLY 100 (±0.1 due to rounding/tiny floats, but not above or below this).
+- At least one emotion must have a value > 0.
+- NEVER output all emotions as zero or leave any out. All 27 keys must be present.
+- Never add extra keys, change any key names, or write text outside the JSON.
+- Output ONLY valid, minified JSON (no explanations). Example:
+{"joy":44.3,"surprise":23.8,"sadness":10,"anger":8,"disgust":3.5,"fear":1,"love":5,"admiration":2,"amusement":2,"annoyance":0,"approval":0,"caring":0,"confusion":0,"curiosity":0,"desire":0,"disappointment":0,"disapproval":0,"embarrassment":0,"excitement":0,"gratitude":0,"grief":0,"nervousness":0,"optimism":0,"pride":0,"realization":0,"relief":0,"remorse":0}
 Required emotions: ${EMOTION_LABELS.join(", ")}.
-
-Rules for your output:
-- Distribute the percentages so that at least one emotion is greater than zero.
-- The total sum MUST add up to around 100 (±1 allowed due to rounding).
-- Do NOT output all emotions as zero. Never leave all values zero. At least one should clearly reflect the user's text.
-- Only output the minified JSON. No extra text or explanation. Example:
-{"joy":43.2,"surprise":21.8,"sadness":12,"anger":7,"disgust":3,"fear":2,"love":6,"admiration":1,"amusement":2,"annoyance":0,"approval":0,"caring":0,"confusion":0,"curiosity":0,"desire":0,"disappointment":0,"disapproval":0,"embarrassment":0,"excitement":0,"gratitude":0,"grief":0,"nervousness":0,"optimism":0,"pride":0,"realization":0,"relief":0,"remorse":0}
-- All 27 keys must be present. Never change the keys or add new ones. Start your output with '{' and end with '}'.
+Output must start with '{' and end with '}'. Only output JSON.
     `.trim();
 
     const userPrompt = `Text: """${text}"""\n\nEmotion classification (json):`;
@@ -85,7 +87,7 @@ Rules for your output:
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192",
+        model: "llama3-70b-8192",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -112,6 +114,19 @@ Rules for your output:
       emotionsObj = JSON.parse(jsonStr);
       console.log("Raw Llama-3 output:", content);
       console.log("Parsed emotions object:", emotionsObj);
+
+      // Defensive: Check all keys present
+      if (
+        Object.keys(emotionsObj).length !== EMOTION_LABELS.length ||
+        !EMOTION_LABELS.every(k => Object.prototype.hasOwnProperty.call(emotionsObj, k))
+      ) {
+        throw new Error(`Expected all 27 emotions. Got: ${Object.keys(emotionsObj).join(", ")}`);
+      }
+      // Defensive: Check that sum ~100 (with tolerance)
+      const total = Object.values(emotionsObj).reduce((a,b) => a + Number(b), 0);
+      if (Math.abs(total - 100) > 0.11) {
+        throw new Error(`Emotion percentages do not sum to 100. Actual sum: ${total}`);
+      }
     } catch (err) {
       console.error("Failed to parse Groq/Llama3 output:", content, err);
       throw new Error("Could not parse emotions for this text.");
@@ -119,10 +134,9 @@ Rules for your output:
 
     // ---- ALL-ZEROES GUARD ----
     const emotionNumbers = EMOTION_LABELS.map(label => Number(emotionsObj![label]) || 0);
+    // Defensive: sum and check all zeros
     const sumOfValues = emotionNumbers.reduce((a, b) => a + b, 0);
     const allZeros = emotionNumbers.every(v => v === 0);
-
-    // If model failed and output is all zeros, assign 100% neutral and 0 for everything else
     if (allZeros) {
       emotionsObj = Object.fromEntries(
         EMOTION_LABELS.map(label =>
@@ -133,37 +147,21 @@ Rules for your output:
     }
 
     // --- NORMALIZATION ---
-    // Some Llama results are { joy: 0, sadness: 0, anger: 0 }, others are { joy: 30.2, ... }
-    // We should map both types into [0, 1] scores.
-    const sampleValue = emotionsObj[Object.keys(emotionsObj)[0]];
-    let normalization: "percent" | "fraction" = "percent";
-    // If all values are <= 1 and sum up to about 1, treat as fraction
-    if (typeof sampleValue === "number") {
-      const values = Object.values(emotionsObj);
-      const allBelowOrEqual1 = values.every(v => typeof v === "number" && v <= 1);
-      const sum = values.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
-      if (allBelowOrEqual1 && sum > 0.9 && sum < 1.1) {
-        normalization = "fraction";
-      }
-    }
-
-    // Filter only allowed emotions, normalize into [0,1]
+    // All values are between 0-100 by requirement
     const allEmotions = EMOTION_LABELS.map(label => {
       const rawVal = emotionsObj![label] ?? 0;
-      let score: number =
-        normalization === "percent"
-          ? Math.max(0, Math.min(1, rawVal / 100))
-          : Math.max(0, Math.min(1, rawVal));
+      // Clamp and normalize to [0, 1]
+      let score: number = Math.max(0, Math.min(1, rawVal / 100));
       return { label, score };
     });
 
-    // Log for debug
+    // Debug log normalized output
     console.log("Normalized emotions array:", allEmotions);
 
     // Pick top emotion
     const topEmotion = allEmotions.reduce((prev, curr) => curr.score > prev.score ? curr : prev);
 
-    // Return format
+    // Return format (output allEmotions so it can show % for each)
     return {
       label: topEmotion.label as EmotionType,
       score: topEmotion.score,

@@ -4,7 +4,7 @@ import { EmotionType } from "../types";
 // Updated with the boltuix/bert-emotion model
 const EMOTION_API_URL = "https://api-inference.huggingface.co/models/boltuix/bert-emotion";
 // NOTE: Make sure to set a valid Hugging Face API Key in the code below!
-const API_KEY = "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"; // <-- Check this key and renew if needed!
+const API_KEY = "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"; // <-- Updated with your provided Hugging Face API Key!
 
 // N8N Workflow Configuration - Updated URL
 const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";

@@ -1,46 +1,13 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType } from "../types";
 
-// Groq Llama-3 API endpoint and key for response generation only
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Updated with a public model without token requirement
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/SamLowe/roberta-base-go_emotions";
+const API_KEY = "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";
 
-// Chutes API configuration
-const CHUTES_API_URL = "https://llm.chutes.ai/v1/chat/completions";
-const CHUTES_API_KEY = "cpk_6cc5756cabc34038a5417bbd7d6801dc.bba497ff4f965c809d1d09d8190879f0.sqFWDWaRytvtGqMiYFR0XU0v7NQIy1hH";
+// N8N Workflow Configuration - Updated URL
+const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
 
-// GoEmotions model emotions mapping (28 emotions)
-const GOEMOTIONS_MAPPING: Record<string, EmotionType> = {
-  'admiration': 'admiration',
-  'amusement': 'amusement', 
-  'anger': 'anger',
-  'annoyance': 'annoyance',
-  'approval': 'approval',
-  'caring': 'caring',
-  'confusion': 'confusion',
-  'curiosity': 'curiosity',
-  'desire': 'desire',
-  'disappointment': 'disappointment',
-  'disapproval': 'disapproval',
-  'disgust': 'disgust',
-  'embarrassment': 'embarrassment',
-  'excitement': 'excitement',
-  'fear': 'fear',
-  'gratitude': 'gratitude',
-  'grief': 'grief',
-  'joy': 'joy',
-  'love': 'love',
-  'nervousness': 'nervousness',
-  'neutral': 'neutral',
-  'optimism': 'optimism',
-  'pride': 'pride',
-  'realization': 'realization',
-  'relief': 'relief',
-  'remorse': 'remorse',
-  'sadness': 'sadness',
-  'surprise': 'surprise'
-};
-
-// Helper: emotion color (keep same)
 export const getEmotionColor = (emotion: EmotionType): string => {
   // Extended color palette for raw emotions
   switch (emotion) {
@@ -76,96 +43,57 @@ export const getEmotionColor = (emotion: EmotionType): string => {
   }
 };
 
-// N8N workflow URL
-const N8N_WORKFLOW_URL = import.meta.env.VITE_N8N_WORKFLOW_URL || "";
-
-// Use Chutes API with Llama 4 Maverick for emotion analysis
 export const analyzeEmotion = async (text: string) => {
   try {
-    console.log('Analyzing emotion with Chutes Llama 4 Maverick model:', text);
-    
-    const systemPrompt = `You are an advanced Emotion Analysis AI trained to detect complex emotional states in human text.
-
-Your task is to return a JSON object showing the percentage distribution of emotions present in the input text.
-
-There are exactly 28 possible emotions. These are:
-
-["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "neutral", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise"]
-
-CRITICAL RULES:
-1. Your output MUST be a JSON object with exactly 28 keys, one for each of the above emotions.
-2. Each emotion must map to a percentage value between 0.0 and 100.0 (float or integer).
-3. The sum of ALL emotion percentages MUST be exactly 100.0.
-4. At least two emotions must be greater than 0.0 — avoid single-emotion outputs.
-5. Think in terms of emotional nuance, subtext, and co-occurring feelings — not just obvious keywords.
-6. Do NOT include any explanation, commentary, or markdown formatting. Output ONLY the JSON.`;
-
-    const response = await fetch(CHUTES_API_URL, {
+    const response = await fetch(EMOTION_API_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${CHUTES_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_KEY}`
       },
-      body: JSON.stringify({
-        model: "chutesai/Llama-4-Maverick-17B-128E-Instruct-FP8",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: text }
-        ],
-        max_tokens: 1000,
-        temperature: 0.3
-      })
+      body: JSON.stringify({ inputs: text }),
     });
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Chutes API error: ${response.status}\n${body}`);
+      throw new Error(`API request failed with status: ${response.status}`);
     }
 
-    const result = await response.json();
-    console.log('Chutes API response:', result);
+    const data = await response.json();
     
-    const content = result.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('No content from Chutes API');
+    // Direct use of model output
+    if (Array.isArray(data) && data.length > 0) {
+      // Get all emotions from the results
+      const emotions = data[0];
+      
+      // Log all detected emotions
+      console.log("All detected emotions:", emotions);
+      
+      // Get the top emotion
+      const topEmotion = emotions.reduce((prev: any, curr: any) => {
+        return prev.score > curr.score ? prev : curr;
+      });
+      
+      console.log("Top emotion:", topEmotion.label, "with score:", topEmotion.score);
+      
+      return {
+        label: topEmotion.label as EmotionType,
+        score: topEmotion.score,
+        color: getEmotionColor(topEmotion.label as EmotionType),
+        emotions: emotions // Return all emotions for reference
+      };
     }
-
-    // Parse the JSON response
-    const emotionScores = JSON.parse(content);
-    console.log('Parsed emotion scores:', emotionScores);
     
-    // Convert to our format
-    const allEmotions = Object.keys(GOEMOTIONS_MAPPING).map(emotion => ({
-      label: emotion as EmotionType,
-      score: (emotionScores[emotion] || 0) / 100 // Convert percentage to decimal
-    }));
-    
-    // Find top emotion
-    const topEmotion = allEmotions.reduce((prev, curr) => 
-      curr.score > prev.score ? curr : prev
-    );
-    
-    console.log('Processed emotion data:', {
-      topEmotion: topEmotion.label,
-      score: topEmotion.score,
-      allEmotions
-    });
-    
-    return {
-      label: topEmotion.label,
-      score: topEmotion.score,
-      color: getEmotionColor(topEmotion.label),
-      emotions: allEmotions
-    };
+    throw new Error("Invalid response format from emotion API");
     
   } catch (error) {
-    console.error('Error analyzing emotion with Chutes:', error);
+    console.error("Error analyzing emotion:", error);
     
-    // Fallback to basic sentiment
+    // Fallback to basic sentiment analysis
     const lowerText = text.toLowerCase();
     let fallbackEmotion: EmotionType = "neutral";
     let fallbackScore = 0.5;
     
+    // Simple keyword-based emotion detection as fallback
     if (lowerText.includes("happy") || lowerText.includes("joy") || lowerText.includes("excited")) {
       fallbackEmotion = "joy";
       fallbackScore = 0.7;
@@ -190,7 +118,7 @@ CRITICAL RULES:
   }
 };
 
-// Keep Mixtral for response generation
+// Enhanced N8N workflow trigger function
 export const triggerEmotionalResponseWorkflow = async (
   userMessage: string,
   emotionResult: any,
@@ -205,8 +133,9 @@ export const triggerEmotionalResponseWorkflow = async (
       emotionScore: emotionResult.score,
       useGenAlpha,
       previousEmotion,
-      conversationHistory: conversationHistory.slice(-5),
+      conversationHistory: conversationHistory.slice(-5), // Only send last 5 messages for context
       timestamp: new Date().toISOString(),
+      // Additional context for better analysis
       textLength: userMessage.length,
       allEmotions: emotionResult.emotions,
       emotionIntensity: emotionResult.score > 0.8 ? 'high' : emotionResult.score < 0.4 ? 'low' : 'moderate'
@@ -222,7 +151,7 @@ export const triggerEmotionalResponseWorkflow = async (
         "ngrok-skip-browser-warning": "true"
       },
       body: JSON.stringify(workflowPayload),
-      signal: AbortSignal.timeout(20000)
+      signal: AbortSignal.timeout(20000) // 20 second timeout for n8n workflow
     });
 
     if (!response.ok) {
@@ -246,83 +175,24 @@ export const triggerEmotionalResponseWorkflow = async (
   } catch (error) {
     console.error("Error triggering N8N workflow:", error);
     
+    // Return fallback response if N8N workflow fails
     return {
-      response: await getLocalFallbackResponseWithMixtral(emotionResult.label, useGenAlpha, previousEmotion, emotionResult.score, userMessage),
+      response: getLocalFallbackResponse(emotionResult.label, useGenAlpha, previousEmotion, emotionResult.score),
       metadata: {
         emotion: emotionResult.label,
         emotionScore: emotionResult.score,
-        source: 'mixtral_fallback',
+        source: 'local_fallback',
         timestamp: new Date().toISOString(),
         error: error.message
       },
-      source: 'mixtral_fallback',
+      source: 'local_fallback',
       error: error.message
     };
   }
 };
 
-// Use Mixtral for generating responses when N8N fails
-const getLocalFallbackResponseWithMixtral = async (
-  emotion: EmotionType,
-  useGenAlpha: boolean = false,
-  previousEmotion?: string,
-  emotionScore?: number,
-  userMessage?: string
-): Promise<string> => {
-  try {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-    if (!apiKey) {
-      return getStaticFallbackResponse(emotion, useGenAlpha, previousEmotion, emotionScore);
-    }
-
-    const intensity = emotionScore && emotionScore > 0.8 ? "high" : emotionScore && emotionScore < 0.4 ? "low" : "moderate";
-    const style = useGenAlpha ? "Gen Alpha slang (rizz, sigma, Ohio, skibidi, no cap, etc.)" : "warm and supportive";
-    
-    const systemPrompt = `You are an empathetic AI companion. Respond to the user's message in a ${style} style. 
-    
-    Context:
-    - Detected emotion: ${emotion} (${intensity} intensity)
-    - Previous emotion: ${previousEmotion || 'none'}
-    - User message: "${userMessage}"
-    
-    Keep your response conversational, supportive, and around 2-3 sentences.`;
-
-    const response = await fetch(GROQ_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "mixtral-8x7b-32768",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage || `I'm feeling ${emotion}` }
-        ],
-        max_tokens: 150,
-        temperature: 0.7
-      }),
-    });
-
-    if (!response.ok) throw new Error('Mixtral API failed');
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    
-    if (content) {
-      return content.trim();
-    } else {
-      throw new Error('No content from Mixtral');
-    }
-    
-  } catch (error) {
-    console.error('Error getting Mixtral response:', error);
-    return getStaticFallbackResponse(emotion, useGenAlpha, previousEmotion, emotionScore);
-  }
-};
-
-// Static fallback when both N8N and Mixtral fail
-const getStaticFallbackResponse = (
+// Enhanced local fallback response function with Gen Alpha lingo
+const getLocalFallbackResponse = (
   emotion: EmotionType,
   useGenAlpha: boolean = false,
   previousEmotion?: string,

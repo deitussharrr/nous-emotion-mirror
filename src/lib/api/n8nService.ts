@@ -3,79 +3,59 @@
 
 import { EmotionResult } from '@/types';
 
-interface GroqResponse {
-  choices?: Array<{
-    message: {
-      content: string;
-    }
-  }>;
+interface OpenRouterResponse {
+  calmingMessage: string;
+  success: boolean;
   error?: string;
 }
 
-// Use Vite environment variables
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Use Vite environment variables (browser compatible)
+const OPENROUTER_API_URL = import.meta.env.VITE_OPENROUTER_API_URL;
 
-// Function to send emotion data to Groq (llama-3-8b) and get calming message
+// Function to send emotion data to OpenRouter and get calming message
 export const processEmotionWithOpenRouter = async (
   text: string,
   emotion: EmotionResult,
   entryId: string
 ): Promise<string> => {
   try {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-    if (!apiKey) {
-      console.log('Groq API key not configured');
+    if (!OPENROUTER_API_URL) {
+      console.log('OpenRouter API URL not configured');
       return generateFallbackMessage(emotion);
     }
 
-    // Compose a prompt for a therapist-like, empathetic, calming message
-    const userPrompt = `A journal entry: "${text.substring(0, 200)}${text.length > 200 ? '...' : ''}" (emotion: ${emotion.label}, score: ${emotion.score}).`;
-    const systemPrompt = `You are an empathetic, supportive AI therapist. 
-For the given journal entry and emotion, generate a calming, concise, and validating message (1-2 sentences) to help the user feel supported. 
-Never mention that you are an AI or language model. Don't provide medical advice, just emotional support.`;
-
-    const response = await fetch(GROQ_API_URL, {
+    // Call the OpenRouter API with emotion data
+    const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
+        'Model': "google/gemma-3-4b-it:free"
       },
       body: JSON.stringify({
-        model: 'llama3-8b-8192',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ],
-        max_tokens: 120,
-        temperature: 0.8
+        entryId,
+        text: text.substring(0, 200) + (text.length > 200 ? '...' : ''),
+        emotionLabel: emotion.label,
+        emotionScore: emotion.score,
+        timestamp: new Date().toISOString(),
+        requestType: 'calmingMessage'
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Groq API request failed: ${response.status}`);
+      throw new Error(`OpenRouter API request failed: ${response.status}`);
     }
 
-    const data: GroqResponse = await response.json();
-    return (
-      (data.choices &&
-        data.choices[0] &&
-        data.choices[0].message &&
-        data.choices[0].message.content) ||
-      generateFallbackMessage(emotion)
-    );
+    const data: OpenRouterResponse = await response.json();
+    return data.calmingMessage || generateFallbackMessage(emotion);
+
   } catch (error) {
-    console.error('Error processing emotion with Groq/Llama3:', error);
+    console.error('Error processing emotion with OpenRouter:', error);
     return generateFallbackMessage(emotion);
   }
 };
 
-// Fallback message generator if Groq is not available
+// Fallback message generator if OpenRouter is not available
 const generateFallbackMessage = (emotion: EmotionResult): string => {
   const emotionLabel = emotion.label.toLowerCase();
   const emotionIntensity = emotion.score > 0.7 ? 'strong' : 'moderate';
@@ -116,9 +96,6 @@ const generateFallbackMessage = (emotion: EmotionResult): string => {
     'Every emotion has its purpose. You\'re handling this well.'
   ];
 
-  const messages =
-    messageTemplates[emotionLabel as keyof typeof messageTemplates] ||
-    defaultMessages;
+  const messages = messageTemplates[emotionLabel as keyof typeof messageTemplates] || defaultMessages;
   return messages[emotionIntensity === 'strong' ? 0 : 1];
 };
-

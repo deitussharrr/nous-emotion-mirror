@@ -49,18 +49,22 @@ export const getEmotionColor = (emotion: EmotionType): string => {
   }
 };
 
+// Add to top (after GROQ_API_URL), define the N8N_WORKFLOW_URL with env variable fallback
+const N8N_WORKFLOW_URL = import.meta.env.VITE_N8N_WORKFLOW_URL || "";
+
 // Use Llama-3 for emotion analysis
 export const analyzeEmotion = async (text: string) => {
   try {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
     if (!apiKey) throw new Error("Groq API key is missing!");
 
-    // Build few-shot prompt
+    // Update system prompt to your new therapist instructions
     const systemPrompt = `
-You are an advanced emotion classifier. 
-Given any journal text, always return ONLY the following 27 emotions as a JSON object where each key is an emotion and each value is its probability (from 0 to 100). 
+You are a caring, supportive therapist. Give empathetic, concise responses (2-3 sentences max). Acknowledge their feelings and offer gentle support. Never give medical advice.
+
+Given any journal text, always return ONLY the following 27 emotions as a JSON object where each key is an emotion and each value is its probability (from 0 to 100).
 Emotions: ${EMOTION_LABELS.join(", ")}.
-Format your response as a minified JSON object: 
+Format your response as a minified JSON object:
 {"admiration": %, "amusement": %, ..., "surprise": %}.
 Ensure your total adds up to 100 (percentages can sum slightly above/below due to rounding). Never use extra or missing categories. Never give explanations or extra text--ONLY pure JSON.
     `.trim();

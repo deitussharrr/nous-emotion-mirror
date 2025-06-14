@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { EmotionResult } from '../types';
 
@@ -43,7 +42,7 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
   
   const { label, score, color, emotions } = emotion;
   const emoji = getEmotionEmoji(label);
-  
+
   return (
     <div className="w-full p-4 rounded-lg bg-white/5 border border-white/10 mt-4 animate-fade-in">
       <div className="flex gap-3">
@@ -59,27 +58,11 @@ const EmotionDisplay: React.FC<EmotionDisplayProps> = ({ emotion, isLoading, pre
               {label}
             </h3>
           </div>
-          {emotions && (
-            <div className="mt-2">
-              <p className="text-xs text-nousText-muted mb-1">All detected emotions:</p>
-              <div className="flex flex-wrap gap-1">
-                {emotions.slice(0, 5).map((emotion: any, index: number) => (
-                  <span 
-                    key={index} 
-                    className="text-xs px-2 py-0.5 rounded-full bg-white/10"
-                    title={`${emotion.label}: ${(emotion.score * 100).toFixed(1)}%`}
-                  >
-                    {emotion.label}: {(emotion.score * 100).toFixed(1)}%
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
-};
+}
 
 // Helper function to get emoji based on emotion
 function getEmotionEmoji(emotion: string): string {

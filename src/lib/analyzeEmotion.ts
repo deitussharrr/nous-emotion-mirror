@@ -4,11 +4,11 @@ import { EmotionType } from "../types";
 // Groq Llama-3 API endpoint and key for response generation only
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// Hugging Face API configuration
-const HF_API_URL = "https://api-inference.huggingface.co/models/monologg/bert-base-cased-goemotions-original";
-const HF_API_KEY = "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";
+// Chutes API configuration
+const CHUTES_API_URL = "https://api.chutes.ai/v1/chat/completions";
+const CHUTES_API_KEY = "cpk_6cc5756cabc34038a5417bbd7d6801dc.bba497ff4f965c809d1d09d8190879f0.sqFWDWaRytvtGqMiYFR0XU0v7NQIy1hH";
 
-// GoEmotions model emotions mapping (based on monologg/bert-base-cased-goemotions-original)
+// GoEmotions model emotions mapping (28 emotions)
 const GOEMOTIONS_MAPPING: Record<string, EmotionType> = {
   'admiration': 'admiration',
   'amusement': 'amusement', 
@@ -79,50 +79,65 @@ export const getEmotionColor = (emotion: EmotionType): string => {
 // N8N workflow URL
 const N8N_WORKFLOW_URL = import.meta.env.VITE_N8N_WORKFLOW_URL || "";
 
-// Use Hugging Face Inference API for emotion analysis
+// Use Chutes API with Llama 4 Maverick for emotion analysis
 export const analyzeEmotion = async (text: string) => {
   try {
-    console.log('Analyzing emotion with Hugging Face GoEmotions model:', text);
+    console.log('Analyzing emotion with Chutes Llama 4 Maverick model:', text);
     
-    const response = await fetch(HF_API_URL, {
+    const systemPrompt = `You are an advanced Emotion Analysis AI trained to detect complex emotional states in human text.
+
+Your task is to return a JSON object showing the percentage distribution of emotions present in the input text.
+
+There are exactly 28 possible emotions. These are:
+
+["admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "neutral", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise"]
+
+CRITICAL RULES:
+1. Your output MUST be a JSON object with exactly 28 keys, one for each of the above emotions.
+2. Each emotion must map to a percentage value between 0.0 and 100.0 (float or integer).
+3. The sum of ALL emotion percentages MUST be exactly 100.0.
+4. At least two emotions must be greater than 0.0 — avoid single-emotion outputs.
+5. Think in terms of emotional nuance, subtext, and co-occurring feelings — not just obvious keywords.
+6. Do NOT include any explanation, commentary, or markdown formatting. Output ONLY the JSON.`;
+
+    const response = await fetch(CHUTES_API_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${HF_API_KEY}`,
+        "Authorization": `Bearer ${CHUTES_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        inputs: text,
-        options: {
-          wait_for_model: true
-        }
+        model: "llama-4-maverick-17b-128e-instruct-fp8",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text }
+        ],
+        max_tokens: 1000,
+        temperature: 0.3
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Hugging Face API error: ${response.status}`);
+      throw new Error(`Chutes API error: ${response.status}`);
     }
 
-    const results = await response.json();
-    console.log('Hugging Face emotion results:', results);
+    const result = await response.json();
+    console.log('Chutes API response:', result);
     
-    // Convert HF results to our format
-    const allEmotions = Object.keys(GOEMOTIONS_MAPPING).map(emotion => {
-      const hfResult = results.find((r: any) => 
-        r.label.toLowerCase() === emotion.toLowerCase()
-      );
-      return {
-        label: emotion as EmotionType,
-        score: hfResult ? hfResult.score : 0
-      };
-    });
-    
-    // Normalize scores to sum to 1
-    const total = allEmotions.reduce((sum, emotion) => sum + emotion.score, 0);
-    if (total > 0) {
-      allEmotions.forEach(emotion => {
-        emotion.score = emotion.score / total;
-      });
+    const content = result.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error('No content from Chutes API');
     }
+
+    // Parse the JSON response
+    const emotionScores = JSON.parse(content);
+    console.log('Parsed emotion scores:', emotionScores);
+    
+    // Convert to our format
+    const allEmotions = Object.keys(GOEMOTIONS_MAPPING).map(emotion => ({
+      label: emotion as EmotionType,
+      score: (emotionScores[emotion] || 0) / 100 // Convert percentage to decimal
+    }));
     
     // Find top emotion
     const topEmotion = allEmotions.reduce((prev, curr) => 
@@ -143,7 +158,7 @@ export const analyzeEmotion = async (text: string) => {
     };
     
   } catch (error) {
-    console.error('Error analyzing emotion with Hugging Face:', error);
+    console.error('Error analyzing emotion with Chutes:', error);
     
     // Fallback to basic sentiment
     const lowerText = text.toLowerCase();

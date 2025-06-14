@@ -4,7 +4,7 @@ import { triggerEmotionalResponseWorkflow } from "./analyzeEmotion";
 
 // Keep existing OpenAI configuration as backup
 const RESPONSE_API_URL = "https://api.openai.com/v1/chat/completions";
-const RESPONSE_API_TOKEN = process.env.REACT_APP_OPENAI_API_KEY || ""; 
+const RESPONSE_API_TOKEN = import.meta.env.VITE_OPENAI_API_KEY || ""; 
 
 // Enhanced fallback responses with Gen Alpha lingo when both N8N and OpenAI fail
 const getFallbackResponse = (

@@ -104,17 +104,41 @@ Ensure your total adds up to 100 (percentages can sum slightly above/below due t
       const jsonStr = content.replace(/.*?({.*}).*/s, "$1"); // extract first {...}
       emotionsObj = JSON.parse(jsonStr);
       console.log("Raw Llama-3 output:", content);
-      console.log("Parsed emotions:", emotionsObj);
+      console.log("Parsed emotions object:", emotionsObj);
     } catch (err) {
       console.error("Failed to parse Groq/Llama3 output:", content, err);
       throw new Error("Could not parse emotions for this text.");
     }
 
+    // --- NORMALIZATION FIX ---
+    // Some Llama results are { joy: 0, sadness: 0, anger: 0 }, others are { joy: 30.2, ... }
+    // We should map both types into [0, 1] scores.
+    // Let's sample the first value to decide normalization logic
+    const sampleValue = emotionsObj[Object.keys(emotionsObj)[0]];
+    let normalization: "percent" | "fraction" = "percent";
+    // If all values are <= 1 and sum up to about 1, treat as fraction
+    if (typeof sampleValue === "number") {
+      const values = Object.values(emotionsObj);
+      const allBelowOrEqual1 = values.every(v => typeof v === "number" && v <= 1);
+      const sum = values.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
+      if (allBelowOrEqual1 && sum > 0.9 && sum < 1.1) {
+        normalization = "fraction";
+      }
+    }
+
     // Filter only allowed emotions, normalize into [0,1]
     const allEmotions = EMOTION_LABELS.map(label => {
       const rawVal = emotionsObj![label] ?? 0;
-      return { label, score: Math.max(0, Math.min(1, rawVal / 100)) };
+      let score: number =
+        normalization === "percent"
+          ? Math.max(0, Math.min(1, rawVal / 100))
+          : Math.max(0, Math.min(1, rawVal));
+      return { label, score };
     });
+
+    // Log for debug
+    console.log("Normalized emotions array:", allEmotions);
+
     // Pick top emotion
     const topEmotion = allEmotions.reduce((prev, curr) => curr.score > prev.score ? curr : prev);
 

@@ -87,7 +87,7 @@ Output must start with '{' and end with '}'. Only output JSON.
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "llama3-70b-8192",
+        model: "mixtral-8x7b-32768",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }

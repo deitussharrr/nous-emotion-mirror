@@ -1,13 +1,19 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType } from "../types";
 
-// Updated with a public model without token requirement
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/SamLowe/roberta-base-go_emotions";
-const API_KEY = "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";
+// Groq Llama-3 API endpoint and key
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// N8N Workflow Configuration - Updated URL
-const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
+// List of allowed 27 emotions
+const EMOTION_LABELS: EmotionType[] = [
+  'admiration', 'amusement', 'anger', 'annoyance', 'approval',
+  'caring', 'confusion', 'curiosity', 'desire', 'disappointment',
+  'disapproval', 'disgust', 'embarrassment', 'excitement', 'fear',
+  'gratitude', 'grief', 'joy', 'love', 'nervousness', 'optimism',
+  'pride', 'realization', 'relief', 'remorse', 'sadness', 'surprise'
+];
 
+// Helper: emotion color (keep same)
 export const getEmotionColor = (emotion: EmotionType): string => {
   // Extended color palette for raw emotions
   switch (emotion) {
@@ -43,52 +49,82 @@ export const getEmotionColor = (emotion: EmotionType): string => {
   }
 };
 
+// Use Llama-3 for emotion analysis
 export const analyzeEmotion = async (text: string) => {
   try {
-    const response = await fetch(EMOTION_API_URL, {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) throw new Error("Groq API key is missing!");
+
+    // Build few-shot prompt
+    const systemPrompt = `
+You are an advanced emotion classifier. 
+Given any journal text, always return ONLY the following 27 emotions as a JSON object where each key is an emotion and each value is its probability (from 0 to 100). 
+Emotions: ${EMOTION_LABELS.join(", ")}.
+Format your response as a minified JSON object: 
+{"admiration": %, "amusement": %, ..., "surprise": %}.
+Ensure your total adds up to 100 (percentages can sum slightly above/below due to rounding). Never use extra or missing categories. Never give explanations or extra text--ONLY pure JSON.
+    `.trim();
+
+    const userPrompt = `Text: """${text}"""\n\nEmotion classification (json):`;
+
+    const response = await fetch(GROQ_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
+        "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({ inputs: text }),
+      body: JSON.stringify({
+        model: "llama3-8b-8192",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 512,
+        temperature: 0.0
+      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`API request failed with status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
 
     const data = await response.json();
-    
-    // Direct use of model output
-    if (Array.isArray(data) && data.length > 0) {
-      // Get all emotions from the results
-      const emotions = data[0];
-      
-      // Log all detected emotions
-      console.log("All detected emotions:", emotions);
-      
-      // Get the top emotion
-      const topEmotion = emotions.reduce((prev: any, curr: any) => {
-        return prev.score > curr.score ? prev : curr;
-      });
-      
-      console.log("Top emotion:", topEmotion.label, "with score:", topEmotion.score);
-      
-      return {
-        label: topEmotion.label as EmotionType,
-        score: topEmotion.score,
-        color: getEmotionColor(topEmotion.label as EmotionType),
-        emotions: emotions // Return all emotions for reference
-      };
+    const content: string =
+      data.choices &&
+      data.choices[0] &&
+      data.choices[0].message &&
+      data.choices[0].message.content;
+    if (!content) throw new Error("No result from Groq emotion analysis");
+
+    // Try to extract JSON from Llama output
+    let emotionsObj: Record<string, number> | null = null;
+    try {
+      const jsonStr = content.replace(/.*?({.*}).*/s, "$1"); // extract first {...}
+      emotionsObj = JSON.parse(jsonStr);
+      console.log("Raw Llama-3 output:", content);
+      console.log("Parsed emotions:", emotionsObj);
+    } catch (err) {
+      console.error("Failed to parse Groq/Llama3 output:", content, err);
+      throw new Error("Could not parse emotions for this text.");
     }
-    
-    throw new Error("Invalid response format from emotion API");
-    
+
+    // Filter only allowed emotions, normalize into [0,1]
+    const allEmotions = EMOTION_LABELS.map(label => {
+      const rawVal = emotionsObj![label] ?? 0;
+      return { label, score: Math.max(0, Math.min(1, rawVal / 100)) };
+    });
+    // Pick top emotion
+    const topEmotion = allEmotions.reduce((prev, curr) => curr.score > prev.score ? curr : prev);
+
+    // Return format
+    return {
+      label: topEmotion.label as EmotionType,
+      score: topEmotion.score,
+      color: getEmotionColor(topEmotion.label as EmotionType),
+      emotions: allEmotions
+    };
   } catch (error) {
-    console.error("Error analyzing emotion:", error);
-    
-    // Fallback to basic sentiment analysis
+    console.error("Error analyzing emotion (Groq):", error);
+
+    // Fallback to basic sentiment if Llama fails
     const lowerText = text.toLowerCase();
     let fallbackEmotion: EmotionType = "neutral";
     let fallbackScore = 0.5;
@@ -118,7 +154,7 @@ export const analyzeEmotion = async (text: string) => {
   }
 };
 
-// Enhanced N8N workflow trigger function
+// N8N workflow trigger and fallback (unchanged)
 export const triggerEmotionalResponseWorkflow = async (
   userMessage: string,
   emotionResult: any,

@@ -1,3 +1,4 @@
+// src/lib/generateResponse.ts
 import { EmotionType, EmotionResult, ConversationMessage } from "../types";
 import { triggerEmotionalResponseWorkflow } from "./analyzeEmotion";
 
@@ -63,7 +64,7 @@ const getFallbackResponse = (
       case "excitement":
         return intensity === "high"
           ? "YOOO you're absolutely BUZZING with hype energy rn! That excitement is giving pure sigma vibes and I'm living for it! What's got you this amped up, fam? 🚀⚡"
-          : "You seem excited about something! I'd love to hear what's got you feeling so enthusiastic.";
+          : "You're giving excited energy and that's some good vibes right there! What's got you hyped up? 🎉";
       
       case "gratitude":
         return "Aww that's some wholesome sigma energy right there! Gratitude is giving main character growth vibes. What's got you feeling blessed, chief? 🙏✨";
@@ -145,7 +146,7 @@ export const generateResponse = async (
   useGenAlpha: boolean = false,
   previousEmotion?: string,
   conversationHistory: ConversationMessage[] = []
-): Promise<string | null> => {
+): Promise<string> => {
   try {
     // First, try the N8N workflow
     console.log("Attempting to use N8N workflow for response generation...");
@@ -176,14 +177,15 @@ export const generateResponse = async (
       return await generateOpenAIResponse(userMessage, emotionResult, useGenAlpha, previousEmotion, conversationHistory);
     }
     
-    // If both N8N and OpenAI are unavailable, do NOT return fallback
-    console.log("No successful LLM response from N8N or OpenAI; returning null (NO FALLBACK)");
-    return null;
+    // If both N8N and OpenAI are unavailable, use enhanced local fallback
+    console.log("Using enhanced local fallback response");
+    return getFallbackResponse(emotionResult.label as EmotionType, useGenAlpha, previousEmotion, emotionResult.score);
     
   } catch (error) {
     console.error("Error in generateResponse:", error);
-    // Do NOT return fallback response; only actual LLM responses or null
-    return null;
+    
+    // Final fallback with error context
+    return getFallbackResponse(emotionResult.label as EmotionType, useGenAlpha, previousEmotion, emotionResult.score);
   }
 };
 
@@ -267,24 +269,24 @@ Respond in a way that makes them feel heard and understood.`
 };
 
 /**
- * Generates a therapist-style supportive message using Groq's Mixtral-8x7b model
- * @param emotions  Array of the top N detected GoEmotions labels (strings)
- * @returns Therapist-style supportive message (string) or null on failure
+ * Generates a therapist-style supportive message using Groq's Llama-8B-8192 model
+ * @param emotionLabels  Array of the top N detected GoEmotions labels (strings)
+ * @returns Therapist-style supportive message (string)
  */
 export async function generateSupportiveMessageWithGroqLlama8b(
   emotions: string[] = [],
   userMessage?: string
-): Promise<string | null> {
-  // Use a therapist style, one sentence, always encouraging the user to share more
-  const systemPrompt = `You are a compassionate, emotionally intelligent AI therapist. Respond with warmth, empathy, and psychological insight. Reply in a SINGLE concise sentence. Always encourage the user to share more, explore deeper, or reflect further. Do not offer solutions—just guide gently, one question or gentle nudge at a time.`;
+): Promise<string> {
+  // Use system prompt for every request
+  const systemPrompt = SYSTEM_MSG.trim();
 
   const instructions =
     emotions.length > 0
-      ? `The user's most prominent emotion(s): ${emotions.join(", ")}. Give a one-sentence, open-ended, supportive therapist reflection according to the system prompt.`
-      : `Provide a one-sentence, open-ended, supportive therapist reflection according to the system prompt.`;
+      ? `The user's most prominent emotion(s): ${emotions.join(", ")}. Provide a compassionate, psychologically-informed one-sentence reflection or open-ended encouragement aligned with the system prompt.`
+      : `Provide a compassionate, psychologically-informed one-sentence reflection or gentle encouragement based on the user's feelings, as described in the system prompt.`;
 
   const body = {
-    model: "mixtral-8x7b-32768",  // <--- Use Mixtral on Groq
+    model: "llama-8b-8192", // Or whichever LLM is being used
     messages: [
       { role: "system", content: systemPrompt },
       ...(userMessage
@@ -293,7 +295,7 @@ export async function generateSupportiveMessageWithGroqLlama8b(
       { role: "user", content: instructions },
     ],
     temperature: 0.8,
-    max_tokens: 80,
+    max_tokens: 120,
     stream: false,
   };
 
@@ -309,18 +311,16 @@ export async function generateSupportiveMessageWithGroqLlama8b(
   if (!response.ok) {
     const err = await response.text();
     console.error("Groq API error:", err);
-    // Return null if Mixtral fails (no fallback)
-    return null;
+    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
   }
 
   const data = await response.json();
   // The API should return the text in data.choices[0].message.content
   const msg = (data?.choices && data.choices[0]?.message?.content) ? data.choices[0].message.content.trim() : null;
   if (!msg) {
-    // No fallback
-    return null;
+    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
   }
-  // Clean up potential prefixed "output: ..." formatting
+  // Groq may sometimes return: output: "message" pattern
   const match = msg.match(/^"?output\s*:\s*["“”']?(.*)["“”']?$/i);
   if (match) return match[1].replace(/^["“”']|["“”']$/g, "");
   if (msg.startsWith('"') && msg.endsWith('"')) return msg.slice(1, -1);

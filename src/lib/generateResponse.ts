@@ -6,9 +6,6 @@ import { triggerEmotionalResponseWorkflow } from "./analyzeEmotion";
 const RESPONSE_API_URL = "https://api.openai.com/v1/chat/completions";
 const RESPONSE_API_TOKEN = import.meta.env.VITE_OPENAI_API_KEY || ""; 
 
-// System message for therapist-style AI
-const SYSTEM_MSG = `You are a compassionate, emotionally intelligent AI therapist. Respond with warmth, empathy, and psychological insight. Keep each reply to one thoughtful sentence. Always encourage the user to share more, explore deeper, or reflect further. Do not offer final solutions—just guide gently, one step at a time.`;
-
 // Enhanced fallback responses with Gen Alpha lingo when both N8N and OpenAI fail
 const getFallbackResponse = (
   emotion: EmotionType,

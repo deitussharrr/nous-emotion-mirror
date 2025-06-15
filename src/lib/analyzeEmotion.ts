@@ -1,5 +1,5 @@
 // src/lib/analyzeEmotion.ts
-import { EmotionType } from "../types";
+import { EmotionType, EmotionResult } from "../types";
 
 // Updated with the bhadresh-savani/bert-base-uncased-emotion model
 const EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
@@ -8,6 +8,17 @@ const API_KEY = "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"; // <-- Your provided Hu
 
 // N8N Workflow Configuration - Updated URL
 const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
+
+// --- Add this definition ---
+const NEGATIVE_EMOTIONS = [
+  "sadness",
+  "anger",
+  "fear",
+  "disgust",
+  "grief",
+  "remorse",
+  "disappointment"
+];
 
 export const getEmotionColor = (emotion: EmotionType): string => {
   // Extended color palette for raw emotions including "distress"

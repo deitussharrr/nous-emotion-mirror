@@ -146,7 +146,7 @@ export const generateResponse = async (
   useGenAlpha: boolean = false,
   previousEmotion?: string,
   conversationHistory: ConversationMessage[] = []
-): Promise<string> => {
+): Promise<string | null> => {
   try {
     // First, try the N8N workflow
     console.log("Attempting to use N8N workflow for response generation...");
@@ -177,15 +177,14 @@ export const generateResponse = async (
       return await generateOpenAIResponse(userMessage, emotionResult, useGenAlpha, previousEmotion, conversationHistory);
     }
     
-    // If both N8N and OpenAI are unavailable, use enhanced local fallback
-    console.log("Using enhanced local fallback response");
-    return getFallbackResponse(emotionResult.label as EmotionType, useGenAlpha, previousEmotion, emotionResult.score);
+    // If both N8N and OpenAI are unavailable, do NOT return fallback
+    console.log("No successful LLM response from N8N or OpenAI; returning null (NO FALLBACK)");
+    return null;
     
   } catch (error) {
     console.error("Error in generateResponse:", error);
-    
-    // Final fallback with error context
-    return getFallbackResponse(emotionResult.label as EmotionType, useGenAlpha, previousEmotion, emotionResult.score);
+    // Do NOT return fallback response; only actual LLM responses or null
+    return null;
   }
 };
 

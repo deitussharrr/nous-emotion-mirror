@@ -1,4 +1,3 @@
-// src/lib/generateResponse.ts
 import { EmotionType, EmotionResult, ConversationMessage } from "../types";
 import { triggerEmotionalResponseWorkflow } from "./analyzeEmotion";
 
@@ -266,68 +265,75 @@ Respond in a way that makes them feel heard and understood.`
 };
 
 /**
- * Generates a therapist-style supportive message using Groq's Llama-8B-8192 model
+ * Generates a therapist-style supportive message using Groq's Llama-8B-8192 model.
+ * Always returns 1 sentence and always prompts the user to say more.
+ * If the API fails, returns null.
  * @param emotionLabels  Array of the top N detected GoEmotions labels (strings)
- * @returns Therapist-style supportive message (string)
+ * @returns Therapist-style supportive message (string) or null if it fails
  */
 export async function generateSupportiveMessageWithGroqLlama8b(
   emotionLabels: string[]
-): Promise<string> {
+): Promise<string | null> {
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
   if (!apiKey) {
     console.error("VITE_GROQ_API_KEY is not set.");
-    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+    return null;
   }
 
-  // Construct the system and user message as specified
+  // NEW SYSTEM PROMPT enforcing 1-sentence, always prompting user to share more
   const systemPrompt = `You are a compassionate, emotionally intelligent therapist.
 
-Given a list of emotions from the GoEmotions taxonomy, respond with a single, short therapist-style message (1–3 sentences) that:
-- Acknowledges the person’s emotional experience
-- Validates their feelings without naming them directly
-- Offers gentle support, safety, and presence
-- Uses calm, non-judgmental language
-- Does NOT list or mention the emotion names
-- Does NOT try to fix or analyze—just reflect and support
+Given a list of emotions from the GoEmotions taxonomy, ALWAYS reply with:
+- A SINGLE, short sentence
+- Do NOT name or list emotions
+- Reflect and validate the user's inner experience (do not analyze or fix)
+- ALWAYS gently encourage the user to share more about how they're feeling (e.g., "Would you like to tell me more about that?", "I'm here if you'd like to continue.", "What else is on your mind?", etc.)
+- NEVER reply with more than one sentence
+- Use warm, calm language
 
-Emotion labels (for reference only):
-admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral
+Here are the emotion labels, for your reference only:
+admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, distress
 `;
 
   const userPrompt = `input: [${emotionLabels.map(e => `"${e}"`).join(", ")}]\noutput:`;
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "llama3-8b-8192",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 100,
-      temperature: 0.7
-    })
-  });
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama3-8b-8192",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 60,
+        temperature: 0.7
+      })
+    });
 
-  if (!response.ok) {
-    const err = await response.text();
-    console.error("Groq API error:", err);
-    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
-  }
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Groq API error:", err);
+      return null; // No fallback, as requested
+    }
 
-  const data = await response.json();
-  // The API should return the text in data.choices[0].message.content
-  const msg = (data?.choices && data.choices[0]?.message?.content) ? data.choices[0].message.content.trim() : null;
-  if (!msg) {
-    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+    const data = await response.json();
+    // The API should return the text in data.choices[0].message.content
+    const msg = (data?.choices && data.choices[0]?.message?.content) ? data.choices[0].message.content.trim() : null;
+    if (!msg) {
+      return null; // No fallback
+    }
+    // Groq may sometimes return: output: "message" pattern
+    const match = msg.match(/^"?output\s*:\s*["“”']?(.*)["“”']?$/i);
+    if (match) return match[1].replace(/^["“”']|["“”']$/g, "");
+    if (msg.startsWith('"') && msg.endsWith('"')) return msg.slice(1, -1);
+    return msg;
+  } catch (error) {
+    console.error("Error calling Groq Llama 8B:", error);
+    return null; // No fallback
   }
-  // Groq may sometimes return: output: "message" pattern
-  const match = msg.match(/^"?output\s*:\s*["“”']?(.*)["“”']?$/i);
-  if (match) return match[1].replace(/^["“”']|["“”']$/g, "");
-  if (msg.startsWith('"') && msg.endsWith('"')) return msg.slice(1, -1);
-  return msg;
 }

@@ -1,4 +1,3 @@
-// src/lib/generateResponse.ts
 import { EmotionType, EmotionResult, ConversationMessage } from "../types";
 import { triggerEmotionalResponseWorkflow } from "./analyzeEmotion";
 
@@ -268,24 +267,24 @@ Respond in a way that makes them feel heard and understood.`
 };
 
 /**
- * Generates a therapist-style supportive message using Groq's Llama-8B-8192 model
- * @param emotionLabels  Array of the top N detected GoEmotions labels (strings)
+ * Generates a therapist-style supportive message using Groq's Mixtral-8x7b model
+ * @param emotions  Array of the top N detected GoEmotions labels (strings)
  * @returns Therapist-style supportive message (string) or null on failure
  */
 export async function generateSupportiveMessageWithGroqLlama8b(
   emotions: string[] = [],
   userMessage?: string
 ): Promise<string | null> {
-  // Use system prompt for every request
-  const systemPrompt = SYSTEM_MSG.trim();
+  // Use a therapist style, one sentence, always encouraging the user to share more
+  const systemPrompt = `You are a compassionate, emotionally intelligent AI therapist. Respond with warmth, empathy, and psychological insight. Reply in a SINGLE concise sentence. Always encourage the user to share more, explore deeper, or reflect further. Do not offer solutions—just guide gently, one question or gentle nudge at a time.`;
 
   const instructions =
     emotions.length > 0
-      ? `The user's most prominent emotion(s): ${emotions.join(", ")}. Provide a compassionate, psychologically-informed one-sentence reflection or open-ended encouragement aligned with the system prompt.`
-      : `Provide a compassionate, psychologically-informed one-sentence reflection or gentle encouragement based on the user's feelings, as described in the system prompt.`;
+      ? `The user's most prominent emotion(s): ${emotions.join(", ")}. Give a one-sentence, open-ended, supportive therapist reflection according to the system prompt.`
+      : `Provide a one-sentence, open-ended, supportive therapist reflection according to the system prompt.`;
 
   const body = {
-    model: "llama-8b-8192", // Or whichever LLM is being used
+    model: "mixtral-8x7b-32768",  // <--- Use Mixtral on Groq
     messages: [
       { role: "system", content: systemPrompt },
       ...(userMessage
@@ -294,7 +293,7 @@ export async function generateSupportiveMessageWithGroqLlama8b(
       { role: "user", content: instructions },
     ],
     temperature: 0.8,
-    max_tokens: 120,
+    max_tokens: 80,
     stream: false,
   };
 
@@ -310,7 +309,7 @@ export async function generateSupportiveMessageWithGroqLlama8b(
   if (!response.ok) {
     const err = await response.text();
     console.error("Groq API error:", err);
-    // Do NOT return fallback message. Instead, return null.
+    // Return null if Mixtral fails (no fallback)
     return null;
   }
 
@@ -321,7 +320,7 @@ export async function generateSupportiveMessageWithGroqLlama8b(
     // No fallback
     return null;
   }
-  // Groq may sometimes return: output: "message" pattern
+  // Clean up potential prefixed "output: ..." formatting
   const match = msg.match(/^"?output\s*:\s*["“”']?(.*)["“”']?$/i);
   if (match) return match[1].replace(/^["“”']|["“”']$/g, "");
   if (msg.startsWith('"') && msg.endsWith('"')) return msg.slice(1, -1);

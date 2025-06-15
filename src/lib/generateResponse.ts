@@ -269,10 +269,12 @@ Respond in a way that makes them feel heard and understood.`
  * Always returns 1 sentence and always prompts the user to say more.
  * If the API fails, returns null.
  * @param emotionLabels  Array of the top N detected GoEmotions labels (strings)
+ * @param text Optional text from the user, for more context
  * @returns Therapist-style supportive message (string) or null if it fails
  */
 export async function generateSupportiveMessageWithGroqLlama8b(
-  emotionLabels: string[]
+  emotionLabels: string[],
+  text?: string
 ): Promise<string | null> {
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
   if (!apiKey) {
@@ -280,10 +282,10 @@ export async function generateSupportiveMessageWithGroqLlama8b(
     return null;
   }
 
-  // NEW SYSTEM PROMPT enforcing 1-sentence, always prompting user to share more
+  // ENHANCED SYSTEM PROMPT: incorporates BOTH emotions and optional original text
   const systemPrompt = `You are a compassionate, emotionally intelligent therapist.
 
-Given a list of emotions from the GoEmotions taxonomy, ALWAYS reply with:
+Given a list of emotions from the GoEmotions taxonomy and sometimes a user's input, ALWAYS reply with:
 - A SINGLE, short sentence
 - Do NOT name or list emotions
 - Reflect and validate the user's inner experience (do not analyze or fix)
@@ -295,7 +297,10 @@ Here are the emotion labels, for your reference only:
 admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, distress
 `;
 
-  const userPrompt = `input: [${emotionLabels.map(e => `"${e}"`).join(", ")}]\noutput:`;
+  const userPrompt = 
+    text
+      ? `input: The person wrote: "${text}"\nemotions detected: [${emotionLabels.map(e => `"${e}"`).join(", ")}]\noutput:`
+      : `input: [${emotionLabels.map(e => `"${e}"`).join(", ")}]\noutput:`;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {

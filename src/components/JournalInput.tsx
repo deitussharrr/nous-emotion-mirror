@@ -1,11 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConversationMessage } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import NoteEmotionGraph from '@/components/NoteEmotionGraph';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { processEmotionWithOpenRouter } from '@/lib/api/n8nService';
 import { generateSupportiveMessageWithGroqLlama8b } from "@/lib/generateResponse";
 import { useToast } from '@/components/ui/use-toast';
 
@@ -57,7 +57,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
       handleSubmit();
     }
   };
-  
+
   const getPlaceholder = () => {
     if (!lastEmotion) return "Write your note here...";
     switch(lastEmotion.toLowerCase()) {
@@ -71,14 +71,18 @@ const JournalInput: React.FC<JournalInputProps> = ({
     }
   };
 
-  // Therapist calming message
+  // Therapist calming message, improved to use both analyzed emotion and corresponding text
   const [calmingMessage, setCalmingMessage] = useState<string | null>(null);
+
   useEffect(() => {
+    // Respond to the latest user message with both text and analyzed emotion
     const fetchTherapistMessage = async () => {
       if (!existingMessages || existingMessages.length === 0) return;
+
+      // Find the latest user message that has an emotion
       for (let i = existingMessages.length - 1; i >= 0; i--) {
         const msg = existingMessages[i];
-        if (msg.emotion && (msg.emotion.emotions || msg.emotion.label)) {
+        if (msg.role === 'user' && msg.emotion) {
           let emotionLabels: string[] = [];
           if (Array.isArray(msg.emotion.emotions)) {
             emotionLabels = msg.emotion.emotions
@@ -92,8 +96,14 @@ const JournalInput: React.FC<JournalInputProps> = ({
           }
           if (emotionLabels.length > 0) {
             setCalmingMessage("Reflecting on your message...");
-            const therapistMsg = await generateSupportiveMessageWithGroqLlama8b(emotionLabels);
-            setCalmingMessage(therapistMsg);
+            // Pass both the text and primary emotions to the prompt (combine in one string)
+            // We'll adjust generateSupportiveMessageWithGroqLlama8b so it now takes (emotionLabels: string[], text?: string)
+            const inputText = msg.content;
+            // Format the emotion labels and text into the prompt
+            const combinedLabels = [...emotionLabels];
+            // Call API with both text and emotions, the emotion labels are still prioritized
+            const therapistMsg = await generateSupportiveMessageWithGroqLlama8b(combinedLabels, inputText);
+            setCalmingMessage(therapistMsg || null);
             return;
           }
         }
@@ -101,6 +111,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
       setCalmingMessage(null);
     };
     fetchTherapistMessage();
+    // Only rerun when the last user message (with emotion) changes
   }, [existingMessages]);
 
   const renderComfortingMessage = () => {
@@ -126,7 +137,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
           onChange={(e) => setTitle(e.target.value)}
         />
       )}
-      
+
       {existingMessages.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-4 max-h-[300px] overflow-y-auto">
@@ -204,3 +215,4 @@ const JournalInput: React.FC<JournalInputProps> = ({
 };
 
 export default JournalInput;
+

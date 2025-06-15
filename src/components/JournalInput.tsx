@@ -7,6 +7,8 @@ import NoteEmotionGraph from '@/components/NoteEmotionGraph';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { processEmotionWithOpenRouter } from '@/lib/api/n8nService';
 import { generateSupportiveMessageWithGroqLlama8b } from "@/lib/generateResponse";
+import { Mic, MicOff } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface JournalInputProps {
   onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;
@@ -26,6 +28,9 @@ const JournalInput: React.FC<JournalInputProps> = ({
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const { toast } = useToast();
   
   useEffect(() => {
     // Resize textarea based on content
@@ -135,7 +140,86 @@ const JournalInput: React.FC<JournalInputProps> = ({
       </Alert>
     );
   };
-  
+
+  // --- Voice Input Logic with Web Speech API (browser-only, free) ---
+  const isSpeechRecognitionSupported =
+    typeof window !== "undefined" &&
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  // Called when mic button is pressed
+  const startVoiceInput = () => {
+    if (!isSpeechRecognitionSupported) {
+      toast({
+        title: "Voice input unavailable",
+        description: "Your browser does not support speech-to-text (Web Speech API). Try Chrome or Edge.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+
+    recognition.lang = "en-US";
+    recognition.interimResults = true; // display words as you speak
+    recognition.continuous = false;
+
+    recognition.onstart = () => setIsRecording(true);
+
+    recognition.onresult = (event: any) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        transcript += event.results[i][0].transcript;
+      }
+      setText(transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error !== "no-speech") {
+        toast({
+          title: "Could not transcribe speech",
+          description: event.error,
+          variant: "destructive",
+        });
+      }
+      setIsRecording(false);
+      recognition.stop();
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognition.start();
+  };
+
+  // Called when user taps mic button again (to stop)
+  const stopVoiceInput = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsRecording(false);
+    }
+  };
+
+  // --- mic button: toggles recording ---
+  const micButton = (
+    <button
+      type="button"
+      aria-label={isRecording ? "Stop voice input" : "Record voice input"}
+      onClick={isRecording ? stopVoiceInput : startVoiceInput}
+      disabled={isLoading}
+      className={`rounded-full bg-nousPurple/80 hover:bg-nousPurple/90 transition-colors p-3 mr-2 flex items-center justify-center ${isRecording ? 'animate-pulse' : ''}`}
+      style={{ outline: isRecording ? '2px solid #c4a7e7' : undefined }}
+    >
+      {isRecording
+        ? <MicOff className="h-5 w-5 text-white" />
+        : <Mic className="h-5 w-5 text-white" />
+      }
+    </button>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-3">
       {!activeNoteId && (
@@ -181,6 +265,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
       )}
       
       <div className="flex gap-2">
+        {micButton}
         <div className="flex-1 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden">
           <Textarea
             ref={textareaRef}

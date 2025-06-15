@@ -64,7 +64,7 @@ const getFallbackResponse = (
       case "excitement":
         return intensity === "high"
           ? "YOOO you're absolutely BUZZING with hype energy rn! That excitement is giving pure sigma vibes and I'm living for it! What's got you this amped up, fam? 🚀⚡"
-          : "You're giving excited energy and that's some good vibes right there! What's got you hyped up? 🎉";
+          : "You seem excited about something! I'd love to hear what's got you feeling so enthusiastic.";
       
       case "gratitude":
         return "Aww that's some wholesome sigma energy right there! Gratitude is giving main character growth vibes. What's got you feeling blessed, chief? 🙏✨";
@@ -271,12 +271,12 @@ Respond in a way that makes them feel heard and understood.`
 /**
  * Generates a therapist-style supportive message using Groq's Llama-8B-8192 model
  * @param emotionLabels  Array of the top N detected GoEmotions labels (strings)
- * @returns Therapist-style supportive message (string)
+ * @returns Therapist-style supportive message (string) or null on failure
  */
 export async function generateSupportiveMessageWithGroqLlama8b(
   emotions: string[] = [],
   userMessage?: string
-): Promise<string> {
+): Promise<string | null> {
   // Use system prompt for every request
   const systemPrompt = SYSTEM_MSG.trim();
 
@@ -311,14 +311,16 @@ export async function generateSupportiveMessageWithGroqLlama8b(
   if (!response.ok) {
     const err = await response.text();
     console.error("Groq API error:", err);
-    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+    // Do NOT return fallback message. Instead, return null.
+    return null;
   }
 
   const data = await response.json();
   // The API should return the text in data.choices[0].message.content
   const msg = (data?.choices && data.choices[0]?.message?.content) ? data.choices[0].message.content.trim() : null;
   if (!msg) {
-    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+    // No fallback
+    return null;
   }
   // Groq may sometimes return: output: "message" pattern
   const match = msg.match(/^"?output\s*:\s*["“”']?(.*)["“”']?$/i);

@@ -14,6 +14,10 @@ const getFallbackResponse = (
 ): string => {
   const intensity = emotionScore && emotionScore > 0.8 ? "high" : emotionScore && emotionScore < 0.4 ? "low" : "moderate";
   
+  if (emotion === "distress") {
+    return "It sounds like things are really tough for you right now. Please know that you're not alone—I'm here with you, and this moment will pass. Would you like to talk more about what's weighing on your heart?";
+  }
+
   if (useGenAlpha) {
     // Gen Alpha style responses with skibidi, sigma, rizz, Ohio energy
     switch (emotion) {

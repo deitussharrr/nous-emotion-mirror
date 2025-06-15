@@ -341,3 +341,44 @@ const getLocalFallbackResponse = (
     }
   }
 };
+
+// --- Update the comforting message for 'distress' ---
+export const generateComfortingMessage = (emotion: EmotionResult): string => {
+  const emotionLabel = emotion.label.toLowerCase();
+
+  if (emotionLabel === 'distress') {
+    // UPDATED: Always calm, validating message. No hotline, just kindness.
+    return "You're going through something really hard right now. Remember, feelings are like waves and this one will pass too—I'm here with you, and you're not alone. Would you like to share more about what's on your mind?";
+  }
+
+  // Messages tailored to specific emotions
+  if (NEGATIVE_EMOTIONS.includes(emotionLabel)) {
+    switch (emotionLabel) {
+      case 'sadness':
+        return "It's okay to feel sad. Remember that emotions come and go like waves, and this feeling will pass. You're not alone in this journey.";
+      case 'anger':
+        return "I notice you're feeling frustrated. Taking deep breaths can help process these strong emotions. Your feelings are valid, and it's okay to feel them.";
+      case 'fear':
+        return "Fear is a natural response to uncertainty. Remember that you've overcome challenges before, and you have the strength to face this too.";
+      case 'disgust':
+        return "Sometimes we encounter things that feel wrong or uncomfortable. Your emotions are guiding you to understand your values better.";
+      case 'grief':
+        return "Grief is love with nowhere to go. It's okay to miss what you've lost, and healing happens in its own time. Be gentle with yourself.";
+      case 'remorse':
+        return "We all make mistakes. Acknowledging them is a sign of growth. Each day is an opportunity to make different choices.";
+      case 'disappointment':
+        return "Disappointment helps us understand what matters to us. It's okay to feel let down, but remember your worth isn't determined by outcomes.";
+      default:
+        return "I notice you're having a tough moment. Remember that all emotions are temporary, and it's okay to not be okay sometimes. Take a gentle breath and know you're not alone.";
+    }
+  }
+  
+  // For positive or neutral emotions
+  if (emotionLabel === 'joy' || emotionLabel === 'love') {
+    return "It's wonderful to see you feeling positive! These moments are worth celebrating and remembering when times get tough.";
+  } else if (emotionLabel === 'neutral') {
+    return "Taking time to reflect and process your thoughts is valuable. How are you really feeling beneath the surface?";
+  } else {
+    return "Thank you for sharing your thoughts. Writing about your experiences can help provide clarity and perspective.";
+  }
+};

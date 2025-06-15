@@ -271,38 +271,46 @@ Respond in a way that makes them feel heard and understood.`
  * @returns Therapist-style supportive message (string)
  */
 export async function generateSupportiveMessageWithGroqLlama8b(
-  emotions: string[] = [],
-  userMessage?: string
+  emotionLabels: string[]
 ): Promise<string> {
-  // Use system prompt for every request
-  const systemPrompt = SYSTEM_MSG.trim();
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) {
+    console.error("VITE_GROQ_API_KEY is not set.");
+    return "Thank you for sharing. I'm here to support you, no matter what you're feeling.";
+  }
 
-  const instructions =
-    emotions.length > 0
-      ? `The user's most prominent emotion(s): ${emotions.join(", ")}. Provide a compassionate, psychologically-informed one-sentence reflection or open-ended encouragement aligned with the system prompt.`
-      : `Provide a compassionate, psychologically-informed one-sentence reflection or gentle encouragement based on the user's feelings, as described in the system prompt.`;
+  // Construct the system and user message as specified
+  const systemPrompt = `You are a compassionate, emotionally intelligent therapist.
 
-  const body = {
-    model: "llama-8b-8192", // Or whichever LLM is being used
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...(userMessage
-        ? [{ role: "user", content: userMessage }]
-        : []),
-      { role: "user", content: instructions },
-    ],
-    temperature: 0.8,
-    max_tokens: 120,
-    stream: false,
-  };
+Given a list of emotions from the GoEmotions taxonomy, respond with a single, short therapist-style message (1–3 sentences) that:
+- Acknowledges the person’s emotional experience
+- Validates their feelings without naming them directly
+- Offers gentle support, safety, and presence
+- Uses calm, non-judgmental language
+- Does NOT list or mention the emotion names
+- Does NOT try to fix or analyze—just reflect and support
+
+Emotion labels (for reference only):
+admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral
+`;
+
+  const userPrompt = `input: [${emotionLabels.map(e => `"${e}"`).join(", ")}]\noutput:`;
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+      "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify({
+      model: "llama3-8b-8192",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 100,
+      temperature: 0.7
+    })
   });
 
   if (!response.ok) {

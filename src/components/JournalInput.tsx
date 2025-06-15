@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -119,7 +118,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
     );
   };
 
-  // --- Web Speech API mic button logic ---
+  // --- Web Speech API mic button logic ONLY ---
   const isSpeechRecognitionSupported =
     typeof window !== "undefined" &&
     ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
@@ -150,7 +149,7 @@ const JournalInput: React.FC<JournalInputProps> = ({
 
     recognition.onerror = (event: any) => {
       toast({
-        title: "Could not transcribe speech",
+        title: "Speech recognition error",
         description: event.error || "Speech recognition error.",
         variant: "destructive",
       });
@@ -276,4 +275,3 @@ const JournalInput: React.FC<JournalInputProps> = ({
 };
 
 export default JournalInput;
-

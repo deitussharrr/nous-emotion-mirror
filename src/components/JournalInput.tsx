@@ -29,10 +29,6 @@ const JournalInput: React.FC<JournalInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
-  // Web Speech API state
-  const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<any>(null);
-
   useEffect(() => {
     // Resize textarea based on content
     if (textareaRef.current) {
@@ -118,63 +114,6 @@ const JournalInput: React.FC<JournalInputProps> = ({
     );
   };
 
-  // --- Web Speech API mic button logic ONLY ---
-  const isSpeechRecognitionSupported =
-    typeof window !== "undefined" &&
-    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-
-  const startMic = () => {
-    if (!isSpeechRecognitionSupported) {
-      toast({
-        title: "Speech recognition not available",
-        description: "Try Chrome or Edge for speech-to-text.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    recognition.lang = "en-US";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = (event: any) => {
-      if (!event.results) return;
-      const transcript = Array.from(event.results)
-        .map((r: any) => r[0].transcript)
-        .join('');
-      setText(transcript);
-    };
-
-    recognition.onerror = (event: any) => {
-      toast({
-        title: "Speech recognition error",
-        description: event.error || "Speech recognition error.",
-        variant: "destructive",
-      });
-      setIsRecording(false);
-      recognition.stop();
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    recognition.start();
-    setIsRecording(true);
-  };
-
-  const stopMic = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-      setIsRecording(false);
-    }
-  };
-
-  // --- END Web Speech API mic logic ---
-
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-3">
       {!activeNoteId && (
@@ -214,16 +153,6 @@ const JournalInput: React.FC<JournalInputProps> = ({
         <NoteEmotionGraph messages={existingMessages} />
       )}
       <div className="flex gap-2">
-        <button
-          type="button"
-          aria-label={isRecording ? "Stop voice input" : "Record voice input"}
-          onClick={isRecording ? stopMic : startMic}
-          disabled={isLoading}
-          className={`rounded-full bg-nousPurple/80 hover:bg-nousPurple/90 transition-colors p-3 mr-2 flex items-center justify-center ${isRecording ? 'animate-pulse' : ''}`}
-          style={{ outline: isRecording ? '2px solid #c4a7e7' : undefined }}
-        >
-          {isRecording ? <MicOff className="h-5 w-5 text-white" /> : <Mic className="h-5 w-5 text-white" />}
-        </button>
         <div className="flex-1 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden">
           <Textarea
             ref={textareaRef}

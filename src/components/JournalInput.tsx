@@ -9,6 +9,7 @@ import { processEmotionWithOpenRouter } from '@/lib/api/n8nService';
 import { generateSupportiveMessageWithGroqLlama8b } from "@/lib/generateResponse";
 import { Mic, MicOff } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import WhisperApiVoiceInput from "./WhisperApiVoiceInput";
 
 interface JournalInputProps {
   onAnalyze: (text: string, title?: string, messages?: ConversationMessage[]) => void;
@@ -220,6 +221,13 @@ const JournalInput: React.FC<JournalInputProps> = ({
     </button>
   );
 
+  // --- handle WhisperAPI transcription ---
+  const handleWhisperTranscribe = (transcribed: string) => {
+    if (transcribed && transcribed.trim()) {
+      setText((prev) => prev.trim() ? prev + "\n" + transcribed : transcribed);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-3">
       {!activeNoteId && (
@@ -266,6 +274,10 @@ const JournalInput: React.FC<JournalInputProps> = ({
       
       <div className="flex gap-2">
         {micButton}
+        <WhisperApiVoiceInput
+          onTranscribe={handleWhisperTranscribe}
+          disabled={isLoading}
+        />
         <div className="flex-1 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden">
           <Textarea
             ref={textareaRef}

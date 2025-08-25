@@ -13,8 +13,9 @@ import LanguageToggle from '@/components/LanguageToggle';
 import CheckInPreferences from '@/components/CheckInPreferences';
 import NoteSearch from '@/components/NoteSearch';
 import EmergencyContactForm from '@/components/EmergencyContactForm';
+import AIConfiguration from '@/components/AIConfiguration';
 
-import { analyzeEmotion } from '@/lib/analyzeEmotion';
+import { analyzeEmotion, triggerAIEmotionalResponse } from '@/lib/analyzeEmotion';
 import { saveEntry, getRecentEntries } from '@/lib/localStorage';
 import { triggerEmergencyResponse, isExtremelyNegative } from '@/lib/triggerEmergencyResponse';
 import { JournalEntry, EmotionResult, EmotionType, ConversationMessage } from '@/types';
@@ -85,6 +86,33 @@ const Index: React.FC = () => {
       // Save the raw emotion result
       setCurrentEmotion(emotionResult);
       
+      // Get conversation history for context
+      const conversationHistory = messages?.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp || new Date().toISOString()
+      })) || [];
+      
+      // Get previous emotion for context
+      const previousEmotion = entries.length > 0 ? entries[0].emotion.label : undefined;
+      
+      // Generate AI-powered customized response
+      const aiResponse = await triggerAIEmotionalResponse(
+        text,
+        emotionResult,
+        useGenZ,
+        previousEmotion,
+        conversationHistory
+      );
+      
+      // Add AI response to messages
+      const aiMessage: ConversationMessage = {
+        role: 'assistant',
+        content: aiResponse.response,
+        timestamp: new Date().toISOString(),
+        emotion: emotionResult
+      };
+      
       // Process messages - ensure the latest message has the emotion analysis
       const processedMessages = messages?.map((msg, idx) => {
         // For this example, we'll use the same emotion result for all messages
@@ -101,6 +129,9 @@ const Index: React.FC = () => {
         return msg;
       }) || [];
       
+      // Add AI response to processed messages
+      const messagesWithAI = [...processedMessages, aiMessage];
+      
       let entryId = activeNoteId;
       
       if (activeNoteId) {
@@ -112,14 +143,14 @@ const Index: React.FC = () => {
               text: text, // Keep this for backward compatibility
               timestamp: new Date().toISOString(), // Update timestamp
               emotion: emotionResult, // Keep this for backward compatibility
-              messages: processedMessages
+              messages: messagesWithAI
             };
           }
           return entry;
         });
         
         setEntries(updatedEntries);
-        setActiveNoteMessages(processedMessages);
+        setActiveNoteMessages(messagesWithAI);
         
         // Update entries in local storage
         updatedEntries.forEach(entry => saveEntry(entry));
@@ -137,7 +168,7 @@ const Index: React.FC = () => {
           text: text, // Keep this for backward compatibility
           timestamp: new Date().toISOString(),
           emotion: emotionResult, // Keep this for backward compatibility
-          messages: processedMessages
+          messages: messagesWithAI
         };
         
         saveEntry(newEntry);
@@ -146,7 +177,7 @@ const Index: React.FC = () => {
         // Set this new note as active for continuing conversation
         setActiveNoteId(newEntry.id);
         setActiveNoteTitle(title || '');
-        setActiveNoteMessages(processedMessages);
+        setActiveNoteMessages(messagesWithAI);
         
         toast({
           title: "Note saved",
@@ -343,7 +374,10 @@ const Index: React.FC = () => {
           )}
 
           {activeTab === 'checkins' && (
-            <CheckInPreferences />
+            <div className="space-y-6">
+              <CheckInPreferences />
+              <AIConfiguration />
+            </div>
           )}
           
           {/* Add new tab for emergency settings */}

@@ -469,7 +469,7 @@ const getLocalFallbackResponse = (
         return "Being confused is literally the worst feeling ever, I totally get it. Sometimes things just don't make sense and that's okay. What's got you feeling this way? 🤔💭";
       
       case "proud":
-        return intensity === "high"
+        return intensity === "high" 
           ? "You should be absolutely PROUD of yourself rn! That accomplishment energy is everything! What are you feeling proud about? 💪✨"
           : "Love that you're feeling proud! It's such a beautiful feeling. What are you proud of? 💫";
       
@@ -585,7 +585,7 @@ const getLocalFallbackResponse = (
         return "I can sense you're feeling confused, and that's completely understandable. Sometimes things just don't make sense and that's okay. What's got you feeling this way?";
       
       case "proud":
-        return intensity === "high"
+        return intensity === "high" 
           ? "I can feel the pride radiating from your message! That sense of accomplishment is truly inspiring. What are you feeling proud about?"
           : "I can sense your pride! That accomplishment is wonderful to see. What are you proud of?";
       
@@ -652,5 +652,266 @@ export const generateComfortingMessage = (emotion: EmotionResult): string => {
     return "Taking time to reflect and process your thoughts is valuable. How are you really feeling beneath the surface?";
   } else {
     return "Thank you for sharing your thoughts. Writing about your experiences can help provide clarity and perspective.";
+  }
+};
+
+// AI-powered customized response generation
+export const generateAICustomizedResponse = async (
+  userMessage: string,
+  emotionResult: EmotionResult,
+  useGenZ: boolean = false,
+  previousEmotion?: string,
+  conversationHistory: any[] = []
+): Promise<string> => {
+  try {
+    // Create a detailed prompt for AI response generation
+    const prompt = createAIPrompt(userMessage, emotionResult, useGenZ, previousEmotion, conversationHistory);
+    
+    // Get API key from localStorage or environment
+    const apiKey = typeof window !== 'undefined' 
+      ? localStorage.getItem('openai_api_key') || (window as any).OPENAI_API_KEY
+      : process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+    
+    // Use OpenAI API or similar AI service for response generation
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an empathetic AI companion that responds to users based on their emotional state. Your responses should be supportive, understanding, and tailored to the specific emotion detected. Use the appropriate tone and language style based on whether the user prefers Gen Z language or traditional language.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.trim();
+
+  } catch (error) {
+    console.error('Error generating AI response:', error);
+    // Fallback to local response if AI fails
+    return getLocalFallbackResponse(emotionResult.label, useGenZ, previousEmotion, emotionResult.score);
+  }
+};
+
+// Create detailed prompt for AI response generation
+const createAIPrompt = (
+  userMessage: string,
+  emotionResult: EmotionResult,
+  useGenZ: boolean,
+  previousEmotion?: string,
+  conversationHistory: any[] = []
+): string => {
+  const emotion = emotionResult.label;
+  const score = emotionResult.score;
+  const intensity = score > 0.8 ? 'high' : score < 0.4 ? 'low' : 'moderate';
+  
+  let languageStyle = useGenZ 
+    ? 'Use Gen Z language with modern slang, emojis, and casual expressions like "rn", "literally", "vibes", etc.'
+    : 'Use traditional, supportive language with proper grammar and empathetic tone.';
+
+  let emotionContext = '';
+  
+  // Add emotion-specific context
+  switch (emotion) {
+    case 'vibing':
+      emotionContext = 'The user is feeling positive and energetic. Acknowledge their good mood and ask what\'s contributing to it.';
+      break;
+    case 'bossed':
+      emotionContext = 'The user is feeling confident and accomplished. Celebrate their success and confidence.';
+      break;
+    case 'stressed':
+      emotionContext = 'The user is feeling overwhelmed and anxious. Offer support and understanding without minimizing their feelings.';
+      break;
+    case 'depressed':
+      emotionContext = 'The user is feeling down and low. Provide gentle support and validation.';
+      break;
+    case 'anxious':
+      emotionContext = 'The user is feeling worried and nervous. Help them feel heard and supported.';
+      break;
+    case 'excited':
+      emotionContext = 'The user is feeling thrilled and enthusiastic. Share in their excitement and ask for details.';
+      break;
+    case 'lonely':
+      emotionContext = 'The user is feeling isolated and disconnected. Offer connection and understanding.';
+      break;
+    case 'angry':
+      emotionContext = 'The user is feeling frustrated or angry. Acknowledge their feelings as valid and help them process.';
+      break;
+    case 'grateful':
+      emotionContext = 'The user is feeling thankful and appreciative. Acknowledge their gratitude and positive mindset.';
+      break;
+    case 'inspired':
+      emotionContext = 'The user is feeling motivated and creative. Support their inspiration and ask about their ideas.';
+      break;
+    case 'tired':
+      emotionContext = 'The user is feeling exhausted and drained. Offer understanding and support for their need to rest.';
+      break;
+    case 'hopeful':
+      emotionContext = 'The user is feeling optimistic about the future. Support their positive outlook.';
+      break;
+    case 'proud':
+      emotionContext = 'The user is feeling accomplished and satisfied. Celebrate their achievements with them.';
+      break;
+    case 'sad':
+      emotionContext = 'The user is feeling unhappy and sorrowful. Provide gentle comfort and understanding.';
+      break;
+    case 'confused':
+      emotionContext = 'The user is feeling uncertain and unclear. Help them find clarity and understanding.';
+      break;
+    case 'cringe':
+      emotionContext = 'The user is feeling embarrassed or awkward. Offer understanding and normalize the feeling.';
+      break;
+    case 'savage':
+      emotionContext = 'The user is feeling bold and fearless. Support their confidence and boldness.';
+      break;
+    case 'soft':
+      emotionContext = 'The user is feeling vulnerable and emotional. Provide gentle, caring support.';
+      break;
+    case 'lit':
+      emotionContext = 'The user is feeling hyped and energetic. Share in their excitement and enthusiasm.';
+      break;
+    case 'blessed':
+      emotionContext = 'The user is feeling fortunate and grateful. Acknowledge their positive perspective.';
+      break;
+    case 'overwhelmed':
+      emotionContext = 'The user is feeling like they have too much to handle. Offer support and help them break things down.';
+      break;
+    case 'frustrated':
+      emotionContext = 'The user is feeling annoyed and irritated. Acknowledge their frustration and help them process it.';
+      break;
+    case 'peaceful':
+      emotionContext = 'The user is feeling calm and content. Acknowledge their peaceful state.';
+      break;
+    case 'nervous':
+      emotionContext = 'The user is feeling anxious and jittery. Help them feel more grounded and supported.';
+      break;
+    case 'mood':
+      emotionContext = 'The user is in a general emotional state. Ask them to elaborate on how they\'re feeling.';
+      break;
+    case 'neutral':
+      emotionContext = 'The user is feeling balanced and neither particularly positive nor negative. Check in on their overall wellbeing.';
+      break;
+    default:
+      emotionContext = 'The user is experiencing an emotion. Provide supportive and understanding response.';
+  }
+
+  // Add context about emotion intensity
+  const intensityContext = `The emotion intensity is ${intensity}. `;
+  
+  // Add context about emotion transition if available
+  const transitionContext = previousEmotion && previousEmotion !== emotion
+    ? `The user\'s emotion has changed from ${previousEmotion} to ${emotion}. `
+    : '';
+
+  // Add conversation history context
+  const historyContext = conversationHistory.length > 0
+    ? `Recent conversation context: ${conversationHistory.slice(-3).map(msg => msg.content).join(' | ')}. `
+    : '';
+
+  return `Generate a personalized response for a user who wrote: "${userMessage}"
+
+Emotion Analysis:
+- Detected emotion: ${emotion}
+- Emotion intensity: ${intensity} (score: ${score})
+- ${emotionContext}
+- ${intensityContext}
+- ${transitionContext}
+- ${historyContext}
+
+Language Style: ${languageStyle}
+
+Requirements:
+1. Keep response under 150 words
+2. Be empathetic and supportive
+3. Ask a follow-up question to encourage conversation
+4. Match the detected emotion and intensity
+5. Use appropriate language style (Gen Z or traditional)
+6. Include relevant emojis if using Gen Z style
+7. Don't be overly clinical or robotic
+8. Show genuine care and understanding
+
+Generate a natural, conversational response:`;
+};
+
+// Enhanced trigger function that uses AI for responses
+export const triggerAIEmotionalResponse = async (
+  userMessage: string,
+  emotionResult: EmotionResult,
+  useGenZ: boolean = false,
+  previousEmotion?: string,
+  conversationHistory: any[] = []
+) => {
+  try {
+    // Try AI-generated response first
+    const aiResponse = await generateAICustomizedResponse(
+      userMessage, 
+      emotionResult, 
+      useGenZ, 
+      previousEmotion, 
+      conversationHistory
+    );
+
+    return {
+      response: aiResponse,
+      metadata: {
+        emotion: emotionResult.label,
+        emotionScore: emotionResult.score,
+        source: 'ai_generated',
+        timestamp: new Date().toISOString(),
+        useGenZ,
+        previousEmotion
+      },
+      source: 'ai_generated'
+    };
+
+  } catch (error) {
+    console.error('Error with AI response generation:', error);
+    
+    // Fallback to N8N workflow or local response
+    try {
+      return await triggerEmotionalResponseWorkflow(
+        userMessage, 
+        emotionResult, 
+        useGenZ, 
+        previousEmotion, 
+        conversationHistory
+      );
+    } catch (n8nError) {
+      console.error('N8N workflow also failed:', n8nError);
+      
+      // Final fallback to local response
+      return {
+        response: getLocalFallbackResponse(emotionResult.label, useGenZ, previousEmotion, emotionResult.score),
+        metadata: {
+          emotion: emotionResult.label,
+          emotionScore: emotionResult.score,
+          source: 'local_fallback',
+          timestamp: new Date().toISOString(),
+          error: error.message
+        },
+        source: 'local_fallback'
+      };
+    }
   }
 };

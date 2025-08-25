@@ -1,10 +1,42 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType, EmotionResult } from "../types";
 
-// Updated with the bhadresh-savani/bert-base-uncased-emotion model
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/bert-base-uncased-emotion";
+// Updated with the facebook/bart-large-mnli model for Gen Z emotion detection
+const EMOTION_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-mnli";
 // NOTE: Make sure to set a valid Hugging Face API Key in the code below!
 const API_KEY = "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"; // <-- Your provided Hugging Face API Key!
+
+// Gen Z specific emotion categories with modern language
+const GENZ_EMOTION_CATEGORIES = [
+  "vibing",           // Feeling good, relaxed, in the zone
+  "bossed",           // Feeling confident, powerful, successful
+  "stressed",         // Anxious, overwhelmed, under pressure
+  "blessed",          // Grateful, thankful, feeling fortunate
+  "mood",             // General emotional state, can be positive or negative
+  "cringe",           // Embarrassed, second-hand embarrassment
+  "savage",           // Bold, fearless, unapologetic
+  "soft",             // Emotional, vulnerable, caring
+  "lit",              // Excited, hyped, energetic
+  "depressed",        // Sad, down, low energy
+  "anxious",          // Worried, nervous, uneasy
+  "confident",        // Self-assured, bold, proud
+  "overwhelmed",      // Too much to handle, stressed out
+  "grateful",         // Thankful, appreciative
+  "frustrated",       // Annoyed, irritated, fed up
+  "inspired",         // Motivated, creative, energized
+  "lonely",           // Feeling isolated, missing connection
+  "peaceful",         // Calm, content, at ease
+  "angry",            // Mad, furious, heated
+  "excited",          // Thrilled, pumped, stoked
+  "tired",            // Exhausted, drained, sleepy
+  "hopeful",          // Optimistic, looking forward to something
+  "confused",         // Uncertain, unclear, puzzled
+  "proud",            // Accomplished, satisfied with achievements
+  "nervous",          // Anxious, jittery, uneasy
+  "happy",            // Joyful, cheerful, glad
+  "sad",              // Unhappy, sorrowful, down
+  "neutral"           // Balanced, neither positive nor negative
+];
 
 // N8N Workflow Configuration - Updated URL
 const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
@@ -21,37 +53,74 @@ const NEGATIVE_EMOTIONS = [
 ];
 
 export const getEmotionColor = (emotion: EmotionType): string => {
-  // Extended color palette for raw emotions including "distress"
+  // Gen Z emotion color palette with modern, vibrant colors
   switch (emotion) {
-    case "joy": return "#FFD43B";
-    case "sadness": return "#5C7CFA";
-    case "anger": return "#FA5252";
-    case "fear": return "#BE4BDB";
-    case "surprise": return "#20C997";
-    case "love": return "#FF8787";
-    case "neutral": return "#CED4DA";
-    case "admiration": return "#82B1FF";
-    case "amusement": return "#98FB98";
-    case "annoyance": return "#FF8A65";
-    case "approval": return "#90CAF9";
-    case "caring": return "#FFCC80";
-    case "confusion": return "#B39DDB";
-    case "curiosity": return "#81D4FA";
-    case "desire": return "#F48FB1";
-    case "disappointment": return "#CE93D8";
-    case "disapproval": return "#EF9A9A";
-    case "disgust": return "#A5D6A7";
-    case "embarrassment": return "#FFAB91";
-    case "excitement": return "#FFF59D";
-    case "gratitude": return "#80CBC4";
-    case "grief": return "#90A4AE";
-    case "nervousness": return "#E1BEE7";
-    case "optimism": return "#C5E1A5";
-    case "pride": return "#FFE082";
-    case "realization": return "#80DEEA";
-    case "relief": return "#B2DFDB";
-    case "remorse": return "#BCAAA4";
-    case "distress": return "#D72638"; // Bright red for distress/emergency
+    // Positive/High Energy Emotions
+    case "vibing": return "#00D4AA";      // Teal - fresh and energetic
+    case "bossed": return "#FF6B6B";      // Coral - bold and confident
+    case "lit": return "#FFE66D";         // Bright yellow - energetic and hyped
+    case "blessed": return "#4ECDC4";     // Mint green - grateful and peaceful
+    case "confident": return "#FF8E53";   // Orange - bold and self-assured
+    case "inspired": return "#A8E6CF";    // Light green - creative and motivated
+    case "excited": return "#FFD93D";     // Golden yellow - thrilled and pumped
+    case "hopeful": return "#6C5CE7";     // Purple - optimistic and forward-looking
+    case "proud": return "#FD79A8";       // Pink - accomplished and satisfied
+    case "happy": return "#00B894";       // Green - joyful and cheerful
+    case "peaceful": return "#74B9FF";    // Light blue - calm and content
+    case "grateful": return "#55A3FF";    // Blue - thankful and appreciative
+    
+    // Neutral Emotions
+    case "mood": return "#A29BFE";        // Lavender - general emotional state
+    case "neutral": return "#DFE6E9";     // Light gray - balanced
+    case "soft": return "#FDCB6E";        // Soft yellow - vulnerable and caring
+    case "savage": return "#E17055";      // Rust - bold and fearless
+    
+    // Negative/Stressed Emotions
+    case "stressed": return "#FF7675";    // Red - overwhelmed and under pressure
+    case "anxious": return "#FAB1A0";     // Light red - worried and nervous
+    case "overwhelmed": return "#E84393"; // Magenta - too much to handle
+    case "frustrated": return "#FF9F43";  // Orange-red - annoyed and irritated
+    case "lonely": return "#6C5CE7";      // Purple - isolated and disconnected
+    case "angry": return "#D63031";       // Dark red - mad and furious
+    case "tired": return "#636E72";       // Dark gray - exhausted and drained
+    case "confused": return "#B2BEC3";    // Gray - uncertain and unclear
+    case "nervous": return "#FD79A8";     // Pink - anxious and jittery
+    case "sad": return "#74B9FF";         // Blue - unhappy and sorrowful
+    case "depressed": return "#5F27CD";   // Dark purple - down and low energy
+    
+    // Special Cases
+    case "cringe": return "#FF9FF3";      // Light pink - embarrassed
+    case "distress": return "#D72638";    // Bright red for emergency
+    
+    // Legacy emotions (keeping for backward compatibility)
+    case "joy": return "#00D4AA";
+    case "sadness": return "#74B9FF";
+    case "anger": return "#D63031";
+    case "fear": return "#E84393";
+    case "surprise": return "#FFE66D";
+    case "love": return "#FD79A8";
+    case "admiration": return "#74B9FF";
+    case "amusement": return "#FFE66D";
+    case "annoyance": return "#FF9F43";
+    case "approval": return "#4ECDC4";
+    case "caring": return "#FDCB6E";
+    case "confusion": return "#B2BEC3";
+    case "curiosity": return "#A8E6CF";
+    case "desire": return "#FD79A8";
+    case "disappointment": return "#FF7675";
+    case "disapproval": return "#FF9F43";
+    case "disgust": return "#00B894";
+    case "embarrassment": return "#FF9FF3";
+    case "excitement": return "#FFE66D";
+    case "gratitude": return "#55A3FF";
+    case "grief": return "#6C5CE7";
+    case "nervousness": return "#FD79A8";
+    case "optimism": return "#6C5CE7";
+    case "pride": return "#FD79A8";
+    case "realization": return "#A8E6CF";
+    case "relief": return "#4ECDC4";
+    case "remorse": return "#FF7675";
+    
     default: return "#7f5af0";
   }
 };
@@ -79,82 +148,143 @@ export const analyzeEmotion = async (text: string) => {
   }
 
   try {
-    console.log("[EmotionAnalysis] Sending request to:", EMOTION_API_URL);
+    console.log("[EmotionAnalysis] Sending request to BART-large-MNLI for Gen Z emotion detection");
+    
+    // Prepare the request for BART-large-MNLI zero-shot classification
+    const requestBody = {
+      inputs: text,
+      parameters: {
+        candidate_labels: GENZ_EMOTION_CATEGORIES,
+        multi_label: false, // Get single best emotion
+        hypothesis_template: "This text expresses the emotion of {}." // Template for zero-shot classification
+      }
+    };
+
     const response = await fetch(EMOTION_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${API_KEY}`,
       },
-      body: JSON.stringify({ inputs: text }),
+      body: JSON.stringify(requestBody),
     });
 
     console.log("[EmotionAnalysis] API Response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      // Add more context for debugging
       console.error(`[EmotionAnalysis] API request failed with status: ${response.status}. Response: ${errorText}`);
       throw new Error(
         `Emotion API error (status ${response.status}): ${errorText}.
-        ⚠️ Double check your Hugging Face API key and the bhadresh-savani/bert-base-uncased-emotion model availability at https://huggingface.co/bhadresh-savani/bert-base-uncased-emotion ⚠️`
+        ⚠️ Double check your Hugging Face API key and the facebook/bart-large-mnli model availability at https://huggingface.co/facebook/bart-large-mnli ⚠️`
       );
     }
 
     const data = await response.json();
     console.log("[EmotionAnalysis] Raw API data:", data);
 
-    // The expected output from bhadresh-savani/bert-base-uncased-emotion is:
-    // [
-    //   [
-    //     { "label": "sadness", "score": 0.98 },
-    //     { "label": "joy", "score": 0.01 },
-    //     ...
-    //   ]
-    // ]
-    if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0])) {
-      const emotions = data[0];
-
-      // Log all detected emotions
-      console.log("All detected emotions:", emotions);
-
+    // The expected output from BART-large-MNLI is:
+    // {
+    //   "sequence": "input text",
+    //   "labels": ["emotion1", "emotion2", ...],
+    //   "scores": [0.95, 0.03, ...]
+    // }
+    if (data.labels && data.scores && Array.isArray(data.labels) && Array.isArray(data.scores)) {
       // Get the top emotion
-      const topEmotion = emotions.reduce((prev: any, curr: any) => {
-        return prev.score > curr.score ? prev : curr;
-      });
+      const topIndex = data.scores.indexOf(Math.max(...data.scores));
+      const topEmotion = data.labels[topIndex];
+      const topScore = data.scores[topIndex];
 
-      console.log("Top emotion:", topEmotion.label, "with score:", topEmotion.score);
+      console.log("Top Gen Z emotion:", topEmotion, "with score:", topScore);
+
+      // Get top 3 emotions for context
+      const topEmotions = data.labels
+        .map((label: string, index: number) => ({
+          label: label as EmotionType,
+          score: data.scores[index]
+        }))
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 3);
 
       return {
-        label: topEmotion.label as EmotionType,
-        score: topEmotion.score,
-        color: getEmotionColor(topEmotion.label as EmotionType),
-        emotions: emotions // Return all emotions for reference
+        label: topEmotion as EmotionType,
+        score: topScore,
+        color: getEmotionColor(topEmotion as EmotionType),
+        emotions: topEmotions // Return top 3 emotions for reference
       };
     }
 
-    throw new Error("[EmotionAnalysis] Invalid response format from emotion API");
+    throw new Error("[EmotionAnalysis] Invalid response format from BART-large-MNLI API");
 
   } catch (error) {
     console.error("Error analyzing emotion:", error);
 
-    // Fallback to basic sentiment analysis
-    let fallbackEmotion: EmotionType = "neutral";
+    // Fallback to Gen Z language pattern detection
+    let fallbackEmotion: EmotionType = "mood";
     let fallbackScore = 0.5;
 
-    if (lowerText.includes("happy") || lowerText.includes("joy") || lowerText.includes("excited")) {
-      fallbackEmotion = "joy";
+    // Gen Z positive expressions
+    if (lowerText.includes("vibing") || lowerText.includes("bossed") || lowerText.includes("lit") || 
+        lowerText.includes("blessed") || lowerText.includes("fire") || lowerText.includes("goals")) {
+      fallbackEmotion = "vibing";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("anxiety")) {
+      fallbackEmotion = "stressed";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("cringe") || lowerText.includes("embarrassed") || lowerText.includes("awkward")) {
+      fallbackEmotion = "cringe";
       fallbackScore = 0.7;
-    } else if (lowerText.includes("sad") || lowerText.includes("cry") || lowerText.includes("depressed")) {
-      fallbackEmotion = "sadness";
+    } else if (lowerText.includes("savage") || lowerText.includes("bold") || lowerText.includes("confident")) {
+      fallbackEmotion = "savage";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("soft") || lowerText.includes("vulnerable") || lowerText.includes("caring")) {
+      fallbackEmotion = "soft";
       fallbackScore = 0.7;
-    } else if (lowerText.includes("angry") || lowerText.includes("mad") || lowerText.includes("furious")) {
-      fallbackEmotion = "anger";
+    } else if (lowerText.includes("depressed") || lowerText.includes("sad") || lowerText.includes("down")) {
+      fallbackEmotion = "depressed";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("anxious") || lowerText.includes("nervous") || lowerText.includes("worried")) {
+      fallbackEmotion = "anxious";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("excited") || lowerText.includes("pumped") || lowerText.includes("stoked")) {
+      fallbackEmotion = "excited";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("tired") || lowerText.includes("exhausted") || lowerText.includes("drained")) {
+      fallbackEmotion = "tired";
       fallbackScore = 0.7;
-    } else if (lowerText.includes("scared") || lowerText.includes("afraid") || lowerText.includes("anxious")) {
-      fallbackEmotion = "fear";
+    } else if (lowerText.includes("hopeful") || lowerText.includes("optimistic") || lowerText.includes("looking forward")) {
+      fallbackEmotion = "hopeful";
       fallbackScore = 0.7;
-    }
+    } else if (lowerText.includes("confused") || lowerText.includes("uncertain") || lowerText.includes("puzzled")) {
+      fallbackEmotion = "mood";
+      fallbackScore = 0.6;
+    } else if (lowerText.includes("proud") || lowerText.includes("accomplished") || lowerText.includes("achievement")) {
+      fallbackEmotion = "proud";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("grateful") || lowerText.includes("thankful") || lowerText.includes("appreciate")) {
+      fallbackEmotion = "grateful";
+      fallbackScore = 0.7;
+    } else if (lowerText.includes("inspired") || lowerText.includes("motivated") || lowerText.includes("creative")) {
+      fallbackEmotion = "inspired";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("lonely") || lowerText.includes("isolated") || lowerText.includes("alone")) {
+      fallbackEmotion = "lonely";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("peaceful") || lowerText.includes("calm") || lowerText.includes("content")) {
+      fallbackEmotion = "peaceful";
+      fallbackScore = 0.7;
+    } else if (lowerText.includes("angry") || lowerText.includes("furious") || lowerText.includes("heated")) {
+      fallbackEmotion = "angry";
+      fallbackScore = 0.8;
+    } else if (lowerText.includes("frustrated") || lowerText.includes("annoyed") || lowerText.includes("irritated")) {
+      fallbackEmotion = "frustrated";
+      fallbackScore = 0.7;
+    } else if (lowerText.includes("happy") || lowerText.includes("joy") || lowerText.includes("cheerful")) {
+      fallbackEmotion = "happy";
+      fallbackScore = 0.7;
+    } else if (lowerText.includes("sad") || lowerText.includes("unhappy") || lowerText.includes("sorrowful")) {
+      fallbackEmotion = "sad";
+      fallbackScore = 0.7;
 
     return {
       label: fallbackEmotion,
@@ -170,7 +300,7 @@ export const analyzeEmotion = async (text: string) => {
 export const triggerEmotionalResponseWorkflow = async (
   userMessage: string,
   emotionResult: any,
-  useGenAlpha: boolean = false,
+  useGenZ: boolean = false,
   previousEmotion?: string,
   conversationHistory: any[] = []
 ) => {
@@ -179,7 +309,7 @@ export const triggerEmotionalResponseWorkflow = async (
       userMessage,
       emotion: emotionResult.label,
       emotionScore: emotionResult.score,
-      useGenAlpha,
+      useGenZ,
       previousEmotion,
       conversationHistory: conversationHistory.slice(-5), // Only send last 5 messages for context
       timestamp: new Date().toISOString(),
@@ -225,7 +355,7 @@ export const triggerEmotionalResponseWorkflow = async (
     
     // Return fallback response if N8N workflow fails
     return {
-      response: getLocalFallbackResponse(emotionResult.label, useGenAlpha, previousEmotion, emotionResult.score),
+      response: getLocalFallbackResponse(emotionResult.label, useGenZ, previousEmotion, emotionResult.score),
       metadata: {
         emotion: emotionResult.label,
         emotionScore: emotionResult.score,
@@ -239,111 +369,241 @@ export const triggerEmotionalResponseWorkflow = async (
   }
 };
 
-// Enhanced local fallback response function with Gen Alpha lingo
+// Enhanced local fallback response function with Gen Z lingo
 const getLocalFallbackResponse = (
   emotion: EmotionType,
-  useGenAlpha: boolean = false,
+  useGenZ: boolean = false,
   previousEmotion?: string,
   emotionScore?: number
 ): string => {
   const intensity = emotionScore && emotionScore > 0.8 ? "high" : emotionScore && emotionScore < 0.4 ? "low" : "moderate";
   
-  if (useGenAlpha) {
-    // Gen Alpha style responses (skibidi, sigma, rizz, Ohio, etc.)
+  if (useGenZ) {
+    // Gen Z style responses with modern slang
     switch (emotion) {
-      case "joy":
+      case "vibing":
         if (intensity === "high") {
-          return previousEmotion === "sadness"
-            ? "Yo that's absolutely SIGMA! Your mood just went from Ohio to straight fire! What caused this W glow up, fam? 🔥✨"
-            : "BRO you're giving main character energy rn! Your rizz is off the charts! What's got you this hyped, no cap? 😎💪";
+          return previousEmotion === "depressed" || previousEmotion === "sad"
+            ? "OMG the glow up is REAL! You went from being in your feels to absolutely VIBING! What's got you feeling this good? ✨🔥"
+            : "You're literally radiating main character energy rn! The vibes are immaculate! What's making you feel this blessed? 💫";
         }
-        return previousEmotion === "sadness"
-          ? "Ayy look at this comeback! From mid to absolutely based! What's the tea? 🌟"
-          : "You're lowkey glowing rn! What's making you feel this fire? 🔥";
+        return "You're giving such good energy rn! Love to see you in your element. What's got you feeling this way? ✨";
       
-      case "sadness":
-        if (intensity === "high") {
-          return "Damn fam, I can feel you're really going through it. That's some heavy Ohio energy but you're not alone in this, no cap. What's weighing on your sigma mindset? 💙🫂";
-        }
-        return previousEmotion === "joy"
-          ? "Your vibe switched up real quick. Sometimes we go from W to L real fast, that's life frfr. What happened? 💙"
-          : "I see you're in your feels rn. That's valid energy though. What's on your mind, chief? 🫂";
-      
-      case "anger":
-        if (intensity === "high") {
-          return "YOOO you're absolutely PRESSED rn! That rage is giving unhinged energy but it's valid AF. What got you this heated, sigma? 🔥💢";
-        }
-        return "You seem lowkey triggered by something. That's some real energy right there. Wanna spill the tea about what's bothering you? 👀";
-      
-      case "fear":
-        if (intensity === "high") {
-          return "Bruh I can sense you're really anxious rn and that's giving major Ohio vibes. But fr you're gonna be okay, we got this together. What's scaring you most, fam? 🌸💚";
-        }
-        return "Getting some sus anxious vibes from you. Anxiety is mid but you're not alone in this grind. What's making you feel sketchy? 💭";
-      
-      case "surprise":
-        return intensity === "high" 
-          ? "NO CAP you're absolutely SHOOK rn! That must've been some crazy plot twist! Drop the lore, what happened?! 😱🔥"
-          : "Ooh something caught you off guard! That's some unexpected main character moment! What's the story? 👀";
-      
-      case "love":
+      case "bossed":
         return intensity === "high"
-          ? "BRO STOP you're literally radiating rizz energy rn! This is giving absolute sigma romance vibes! Tell me about this person who's got you all soft! 💕✨"
-          : "Ayy you're catching feelings! That's some wholesome sigma energy right there. Who's got your heart happy, chief? 💕";
+          ? "YASSS you absolutely BOSSED that! That confidence is everything! You're giving main character energy and I'm here for it! 👑✨"
+          : "You're definitely in your boss era! Love the confidence you're radiating. What's got you feeling this powerful? 💪";
       
-      case "neutral":
-        return previousEmotion ? "Your energy seems to have balanced out. You're giving chill vibes now, how you feeling fr?" : "Just vibing in neutral mode? What's on your sigma mindset today, fam? 💭";
+      case "stressed":
+        if (intensity === "high") {
+          return "Babe, I can feel you're really going through it rn. That stress is valid AF and you don't have to carry it alone. What's weighing on you? 💙🫂";
+        }
+        return "Stress is literally the worst, I feel you. Sometimes we just need to vent it out. What's got you feeling this overwhelmed? 💭";
+      
+      case "blessed":
+        return intensity === "high"
+          ? "You're literally living your best life rn! That gratitude energy is everything! What are you feeling blessed about today? 🙏✨"
+          : "Love that you're feeling grateful! It's such a beautiful mindset. What's making you feel blessed? 💕";
+      
+      case "cringe":
+        return "Oof, we've all been there! That second-hand embarrassment is real but it's totally normal. What happened that made you feel this way? 😬";
+      
+      case "savage":
+        return intensity === "high"
+          ? "You're absolutely UNHINGED rn and I'm living for it! That savage energy is everything! What's got you feeling this bold? 😈🔥"
+          : "You're definitely in your savage era! Love the confidence. What's making you feel this fearless? 💪";
+      
+      case "soft":
+        return "Aww, you're being so vulnerable rn and that's beautiful. It's okay to be soft and feel your feelings. What's got you feeling this way? 🥺💕";
+      
+      case "lit":
+        return intensity === "high"
+          ? "You're absolutely LIT rn! That energy is contagious! What's got you feeling this hyped? 🔥✨"
+          : "You're definitely feeling the vibes! Love the energy you're bringing. What's got you excited? 💫";
+      
+      case "depressed":
+        if (intensity === "high") {
+          return "I can feel you're really going through it rn, and I want you to know that your feelings are completely valid. You don't have to go through this alone. What's weighing on your heart? 💙🫂";
+        }
+        return "Depression is literally the worst, I'm so sorry you're feeling this way. Your feelings are valid and you're not alone. What's on your mind? 💙";
+      
+      case "anxious":
+        if (intensity === "high") {
+          return "Anxiety is literally the worst, I feel you so hard rn. That worry is valid and you're not alone in this. What's making you feel this anxious? 💭💙";
+        }
+        return "Anxiety can be so overwhelming, I totally get it. Sometimes we just need to talk it out. What's on your mind? 💭";
+      
+      case "overwhelmed":
+        return "Being overwhelmed is literally the worst feeling ever. Sometimes life just gives us too much to handle at once. What's got you feeling this way? 💙";
+      
+      case "inspired":
+        return intensity === "high"
+          ? "You're literally radiating creative energy rn! That inspiration is everything! What's got you feeling this motivated? 💡✨"
+          : "Love that you're feeling inspired! It's such a beautiful feeling. What's motivating you? 💫";
+      
+      case "lonely":
+        return "Feeling lonely is literally the worst, I'm so sorry you're going through that. You're not alone in feeling this way, even if it feels like it. What's on your mind? 💙🫂";
+      
+      case "peaceful":
+        return "You're literally in your zen era rn and I'm here for it! That peaceful energy is everything. What's got you feeling this calm? 😌✨";
+      
+      case "angry":
+        if (intensity === "high") {
+          return "You're absolutely PRESSED rn and that's valid AF! Sometimes we just need to feel our anger. What's got you feeling this heated? 🔥💢";
+        }
+        return "Anger is a totally valid emotion, don't let anyone tell you otherwise. What's got you feeling this way? 💭";
+      
+      case "excited":
+        return intensity === "high"
+          ? "You're literally BUZZING rn and I'm living for it! That excitement is everything! What's got you feeling this hyped? 🤩✨"
+          : "Love that you're feeling excited! It's such a good energy. What are you looking forward to? 💫";
+      
+      case "tired":
+        return "Being tired is literally the worst, I feel you so hard. Sometimes we just need to rest and that's totally okay. What's got you feeling this drained? 😴💙";
+      
+      case "hopeful":
+        return "You're literally radiating hope rn and it's beautiful! That optimism is everything. What are you feeling hopeful about? 🤞✨";
+      
+      case "confused":
+        return "Being confused is literally the worst feeling ever, I totally get it. Sometimes things just don't make sense and that's okay. What's got you feeling this way? 🤔💭";
+      
+      case "proud":
+        return intensity === "high"
+          ? "You should be absolutely PROUD of yourself rn! That accomplishment energy is everything! What are you feeling proud about? 💪✨"
+          : "Love that you're feeling proud! It's such a beautiful feeling. What are you proud of? 💫";
+      
+      case "nervous":
+        return "Being nervous is literally the worst, I feel you. Sometimes we just need to talk through our worries. What's making you feel this anxious? 😰💭";
+      
+      case "happy":
+        return intensity === "high"
+          ? "You're literally radiating happiness rn and it's everything! That joy is contagious! What's got you feeling this good? 😊✨"
+          : "Love that you're feeling happy! It's such a beautiful energy. What's bringing you joy? 💫";
+      
+      case "sad":
+        if (intensity === "high") {
+          return "I can feel you're really going through it rn, and I want you to know that your sadness is completely valid. You don't have to carry this alone. What's weighing on your heart? 💙🫂";
+        }
+        return "Being sad is literally the worst, I'm so sorry you're feeling this way. Your feelings are valid and you're not alone. What's on your mind? 💙";
+      
+      case "mood":
+        return "You're literally in your feels rn and that's totally valid. Sometimes we just need to feel our emotions. What's on your mind? 💭";
       
       default:
         return intensity === "high"
-          ? "I can feel the intensity of whatever you're going through rn. That's some real main character energy and your feelings are absolutely valid, no cap 💜"
-          : "I'm here for whatever you're experiencing, chief. No judgment, just listening. What's the situation? 💜";
+          ? "I can feel the intensity of whatever you're going through rn. That's some real main character energy and your feelings are absolutely valid! 💜"
+          : "I'm here for whatever you're experiencing, no judgment. What's on your mind? 💜";
     }
   } else {
     // Regular supportive responses with intensity consideration
     switch (emotion) {
-      case "joy":
+      case "vibing":
         if (intensity === "high") {
-          return previousEmotion === "sadness"
-            ? "What a beautiful transformation! I can feel the joy radiating from your message. It's wonderful to see you emerge from sadness into such happiness. What brought about this positive change?"
-            : "Your happiness is absolutely infectious! I can sense the deep joy you're experiencing. What's filling your heart with such wonderful feelings?";
+          return previousEmotion === "depressed" || previousEmotion === "sad"
+            ? "What a beautiful transformation! I can feel the positive energy radiating from your message. It's wonderful to see you emerge from sadness into such a good mood. What brought about this positive change?"
+            : "Your positive energy is absolutely infectious! I can sense the deep contentment you're experiencing. What's filling your heart with such wonderful feelings?";
         }
-        return previousEmotion === "sadness"
-          ? "I notice your mood has brightened from earlier. What helped turn things around for you?"
-          : "I can sense your positive energy! What's bringing you this happiness?";
+        return "I can sense your positive energy! What's bringing you this contentment?";
       
-      case "sadness":
+      case "bossed":
+        return intensity === "high"
+          ? "I can feel the confidence and power radiating from your message! That self-assurance is truly inspiring. What's got you feeling this confident?"
+          : "I can sense your confidence! That self-assurance is wonderful to see. What's making you feel this powerful?";
+      
+      case "stressed":
+        if (intensity === "high") {
+          return "I can feel the depth of stress you're experiencing right now, and I want you to know that your feelings are completely valid. You don't have to carry this burden alone. What's weighing most heavily on your mind?";
+        }
+        return "It sounds like you're going through a stressful time. Your feelings are completely valid. I'm here to listen if you'd like to talk about it.";
+      
+      case "blessed":
+        return intensity === "high"
+          ? "I can feel the deep gratitude and appreciation in your message. That sense of being blessed is truly beautiful. What are you feeling grateful for today?"
+          : "I can sense your gratitude! That appreciation for life's blessings is wonderful. What's making you feel blessed?";
+      
+      case "cringe":
+        return "It sounds like you experienced something embarrassing or awkward. Those feelings are completely normal - we all have cringe moments. What happened that made you feel this way?";
+      
+      case "savage":
+        return intensity === "high"
+          ? "I can sense the boldness and fearlessness in your message! That confidence is truly inspiring. What's got you feeling this bold?"
+          : "I can sense your boldness! That confidence is wonderful to see. What's making you feel this fearless?";
+      
+      case "soft":
+        return "I can feel the vulnerability and tenderness in your message. It's beautiful that you're allowing yourself to be soft and feel your emotions. What's got you feeling this way?";
+      
+      case "lit":
+        return intensity === "high"
+          ? "I can feel the excitement and energy radiating from your message! That enthusiasm is absolutely contagious. What's got you feeling this hyped?"
+          : "I can sense your excitement! That energy is wonderful. What's got you feeling this way?";
+      
+      case "depressed":
         if (intensity === "high") {
           return "I can feel the depth of sadness you're experiencing right now, and I want you to know that your pain is completely valid and important. You don't have to carry this burden alone. What's weighing most heavily on your heart?";
         }
-        return previousEmotion === "joy"
-          ? "I notice your mood has shifted from earlier happiness. That's completely normal - emotions can change throughout the day. Would you like to share what's affecting you?"
-          : "It sounds like you're going through something difficult. Your feelings are completely valid. I'm here to listen if you'd like to talk about it.";
+        return "It sounds like you're going through something difficult. Your feelings are completely valid. I'm here to listen if you'd like to talk about it.";
       
-      case "anger":
+      case "anxious":
+        if (intensity === "high") {
+          return "I can tell you're experiencing significant anxiety right now, and that must feel overwhelming. It's completely understandable to feel this way. You're safe here, and we can work through this together. What's causing you the most worry?";
+        }
+        return "It seems like you might be feeling anxious about something. Those feelings are completely natural and valid. What's on your mind?";
+      
+      case "overwhelmed":
+        return "I can sense you're feeling overwhelmed, and that's completely understandable. Sometimes life gives us more than we can handle at once. What's got you feeling this way?";
+      
+      case "inspired":
+        return intensity === "high"
+          ? "I can feel the inspiration and motivation radiating from your message! That creative energy is truly beautiful. What's got you feeling this motivated?"
+          : "I can sense your inspiration! That motivation is wonderful to see. What's inspiring you?";
+      
+      case "lonely":
+        return "I can sense you're feeling lonely, and that's completely understandable. Feeling isolated can be incredibly difficult. You're not alone in feeling this way, even if it feels like it. What's on your mind?";
+      
+      case "peaceful":
+        return "I can feel the calm and contentment in your message. That peaceful energy is truly beautiful. What's got you feeling this way?";
+      
+      case "angry":
         if (intensity === "high") {
           return "I can sense the intensity of your anger, and I want you to know that these feelings are completely valid. Strong emotions often signal that something important to you has been affected. What would help you feel heard and understood right now?";
         }
-        return "I notice some frustration in your message. It's completely okay to feel angry - those emotions are telling you something important. Would you like to explore what's bothering you?";
+        return "I notice some anger in your message. It's completely okay to feel angry - those emotions are telling you something important. Would you like to explore what's bothering you?";
       
-      case "fear":
-        if (intensity === "high") {
-          return "I can tell you're experiencing significant anxiety or fear right now, and that must feel overwhelming. It's completely understandable to feel this way. You're safe here, and we can work through this together. What's causing you the most worry?";
-        }
-        return "It seems like you might be feeling anxious or worried about something. Those feelings are completely natural and valid. What's on your mind?";
-      
-      case "surprise":
-        return intensity === "high" 
-          ? "That must have been quite a shock! Big surprises can be overwhelming to process. How are you feeling about this unexpected development?"
-          : "That sounds unexpected! How are you processing this surprise?";
-      
-      case "love":
+      case "excited":
         return intensity === "high"
-          ? "I can feel the warmth and depth of love in your message - it's truly beautiful. Those deep connections with others are one of life's greatest gifts. Would you like to share more about this special bond?"
-          : "I can sense the warmth and affection in your words. Those positive connections are so important. Would you like to share more?";
+          ? "I can feel the excitement radiating from your message! That enthusiasm is absolutely contagious. What's got you feeling this hyped?"
+          : "I can sense your excitement! That energy is wonderful. What are you looking forward to?";
       
-      case "neutral":
-        return previousEmotion ? "Your emotions seem to have found a balance now. How are you feeling overall?" : "How are things going for you today? I'm here to listen to whatever's on your mind.";
+      case "tired":
+        return "I can sense you're feeling tired, and that's completely understandable. Sometimes we just need to rest and that's totally okay. What's got you feeling this drained?";
+      
+      case "hopeful":
+        return "I can feel the hope and optimism in your message. That positive outlook is truly beautiful. What are you feeling hopeful about?";
+      
+      case "confused":
+        return "I can sense you're feeling confused, and that's completely understandable. Sometimes things just don't make sense and that's okay. What's got you feeling this way?";
+      
+      case "proud":
+        return intensity === "high"
+          ? "I can feel the pride radiating from your message! That sense of accomplishment is truly inspiring. What are you feeling proud about?"
+          : "I can sense your pride! That accomplishment is wonderful to see. What are you proud of?";
+      
+      case "nervous":
+        return "I can sense you're feeling nervous, and that's completely understandable. Sometimes we just need to talk through our worries. What's making you feel this anxious?";
+      
+      case "happy":
+        return intensity === "high"
+          ? "I can feel the happiness radiating from your message! That joy is absolutely infectious. What's got you feeling this good?"
+          : "I can sense your happiness! That joy is wonderful. What's bringing you happiness?";
+      
+      case "sad":
+        if (intensity === "high") {
+          return "I can feel the depth of sadness you're experiencing right now, and I want you to know that your pain is completely valid and important. You don't have to carry this burden alone. What's weighing most heavily on your heart?";
+        }
+        return "It sounds like you're going through something difficult. Your feelings are completely valid. I'm here to listen if you'd like to talk about it.";
+      
+      case "mood":
+        return "I can sense you're in your feelings right now, and that's completely normal. Sometimes we just need to feel our emotions. What's on your mind?";
       
       default:
         return intensity === "high"

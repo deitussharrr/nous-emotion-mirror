@@ -29,9 +29,9 @@ const Index: React.FC = () => {
   const [activeNoteMessages, setActiveNoteMessages] = useState<ConversationMessage[]>([]);
   const [activeNoteTitle, setActiveNoteTitle] = useState<string>('');
 
-  // Process entries to get emotion data for the graph - ONLY from messages
+  // Process entries to get emotion data for the graph - from both entry emotions and message emotions
   const getEmotionData = () => {
-    const allMessageEmotions: {
+    const allEmotions: {
       timestamp: string;
       label: EmotionType;
       score: number;
@@ -39,11 +39,21 @@ const Index: React.FC = () => {
     }[] = [];
     
     entries.forEach(entry => {
-      // Only add emotions from individual messages
+      // Add emotion from the entry itself
+      if (entry.emotion) {
+        allEmotions.push({
+          timestamp: entry.timestamp,
+          label: entry.emotion.label as EmotionType,
+          score: entry.emotion.score,
+          messageContent: entry.text.slice(0, 50) + (entry.text.length > 50 ? '...' : '')
+        });
+      }
+      
+      // Also add emotions from individual messages if they exist
       if (entry.messages && entry.messages.length > 0) {
         entry.messages.forEach(message => {
           if (message.emotion) {
-            allMessageEmotions.push({
+            allEmotions.push({
               timestamp: message.timestamp || entry.timestamp,
               label: message.emotion.label as EmotionType,
               score: message.emotion.score,
@@ -54,7 +64,16 @@ const Index: React.FC = () => {
       }
     });
     
-    return allMessageEmotions;
+    // Sort by timestamp and remove duplicates (keep the latest emotion for each timestamp)
+    const uniqueEmotions = allEmotions.reduce((acc, emotion) => {
+      const existing = acc.find(e => e.timestamp === emotion.timestamp);
+      if (!existing) {
+        acc.push(emotion);
+      }
+      return acc;
+    }, [] as typeof allEmotions);
+    
+    return uniqueEmotions.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   };
 
   const handleAnalyzeEmotion = async (text: string, title?: string, messages?: ConversationMessage[]) => {

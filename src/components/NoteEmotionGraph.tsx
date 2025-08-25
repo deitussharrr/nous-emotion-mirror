@@ -9,8 +9,8 @@ interface NoteEmotionGraphProps {
 }
 
 const NoteEmotionGraph: React.FC<NoteEmotionGraphProps> = ({ messages }) => {
-  // If there are no messages with emotions, don't render anything
-  if (!messages.length || !messages.some(message => message.emotion)) {
+  // If there are no messages, don't render anything
+  if (!messages.length) {
     return null;
   }
 
@@ -25,16 +25,7 @@ const NoteEmotionGraph: React.FC<NoteEmotionGraphProps> = ({ messages }) => {
     }))
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-  if (emotionData.length <= 1) {
-    return (
-      <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/10">
-        <p className="text-sm text-nousText-muted text-center">
-          Add more messages to see your emotion graph
-        </p>
-      </div>
-    );
-  }
-
+  // Always show the graph component, let it handle the data display
   return (
     <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/10">
       <p className="text-sm text-nousText-muted mb-2">Emotion changes in this note:</p>

@@ -16,15 +16,21 @@ export interface EmotionResult {
   emotions?: Array<{label: string; score: number}>;
 }
 
-// Expanded to include all possible raw emotions from the model
+// Gen Z emotion types for modern language detection
 export type EmotionType = 
-  | 'admiration' | 'amusement' | 'anger' | 'annoyance' | 'approval' 
-  | 'caring' | 'confusion' | 'curiosity' | 'desire' | 'disappointment' 
-  | 'disapproval' | 'disgust' | 'embarrassment' | 'excitement' | 'fear' 
-  | 'gratitude' | 'grief' | 'joy' | 'love' | 'nervousness' | 'optimism' 
-  | 'pride' | 'realization' | 'relief' | 'remorse' | 'sadness' 
-  | 'surprise' | 'neutral'
-  | 'distress'; // <-- Add "distress"
+  // Modern Gen Z emotions
+  | 'vibing' | 'bossed' | 'stressed' | 'blessed' | 'mood' | 'cringe'
+  | 'savage' | 'soft' | 'lit' | 'depressed' | 'anxious' | 'confident'
+  | 'overwhelmed' | 'grateful' | 'frustrated' | 'inspired' | 'lonely'
+  | 'peaceful' | 'angry' | 'excited' | 'tired' | 'hopeful' | 'confused'
+  | 'proud' | 'nervous' | 'happy' | 'sad'
+  
+  // Legacy emotions (keeping for backward compatibility)
+  | 'admiration' | 'amusement' | 'annoyance' | 'approval' | 'caring'
+  | 'curiosity' | 'desire' | 'disappointment' | 'disapproval' | 'disgust'
+  | 'embarrassment' | 'excitement' | 'fear' | 'grief' | 'love'
+  | 'nervousness' | 'optimism' | 'realization' | 'relief' | 'remorse'
+  | 'surprise' | 'neutral' | 'distress';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';

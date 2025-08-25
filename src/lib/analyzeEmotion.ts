@@ -667,39 +667,41 @@ export const generateAICustomizedResponse = async (
     // Create a detailed prompt for AI response generation
     const prompt = createAIPrompt(userMessage, emotionResult, useGenZ, previousEmotion, conversationHistory);
     
-    // Get API key from localStorage or environment
+        // Get API key from localStorage or environment
     const apiKey = typeof window !== 'undefined' 
-      ? localStorage.getItem('openai_api_key') || (window as any).OPENAI_API_KEY
-      : process.env.OPENAI_API_KEY;
+      ? localStorage.getItem('openrouter_api_key') || (window as any).OPENROUTER_API_KEY
+      : process.env.OPENROUTER_API_KEY || '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';
     
     if (!apiKey) {
-      throw new Error('OpenAI API key not configured');
+      throw new Error('OpenRouter API key not configured');
     }
     
-    // Use OpenAI API or similar AI service for response generation
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Use OpenRouter API with Mistral model for response generation
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window?.location?.origin || 'http://localhost:3000',
+        'X-Title': 'Nous Emotion Mirror'
       },
-              body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 200,
-          temperature: 0.9, // Higher temperature for more creativity and variety
-          presence_penalty: 0.6, // Encourage new topics and ideas
-          frequency_penalty: 0.8 // Discourage repetitive language
-        })
+      body: JSON.stringify({
+        model: 'mistralai/mistral-small-3.2-24b-instruct:free',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.9, // Higher temperature for more creativity and variety
+        presence_penalty: 0.6, // Encourage new topics and ideas
+        frequency_penalty: 0.8 // Discourage repetitive language
+      })
     });
 
     if (!response.ok) {

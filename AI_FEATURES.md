@@ -6,14 +6,14 @@ The emotion mirror now includes AI-powered customized responses that generate pe
 ## Features
 
 ### 🧠 **AI-Generated Responses**
-- **OpenAI Integration**: Uses GPT-3.5-turbo for natural, empathetic responses
+- **OpenRouter Integration**: Uses Mistral Small 3.2B (24B Instruct) for natural, empathetic responses
 - **Context Awareness**: Considers conversation history and emotion transitions
 - **Emotion-Specific**: Tailored responses for each of the 27+ Gen Z emotions
 - **Language Style**: Adapts between Gen Z slang and traditional language
 - **Intensity Matching**: Responses vary based on emotion intensity (high/moderate/low)
 
 ### 🔄 **Fallback System**
-1. **Primary**: AI-generated response (OpenAI)
+1. **Primary**: AI-generated response (OpenRouter + Mistral)
 2. **Secondary**: N8N workflow response
 3. **Tertiary**: Local fallback responses
 
@@ -27,8 +27,8 @@ The emotion mirror now includes AI-powered customized responses that generate pe
 
 ### Required API Keys
 ```bash
-# OpenAI API Key (for AI responses)
-OPENAI_API_KEY=your-openai-api-key-here
+# OpenRouter API Key (for AI responses)
+OPENROUTER_API_KEY=your-openrouter-api-key-here
 
 # Hugging Face API Key (for emotion detection)
 HUGGINGFACE_API_KEY=your-huggingface-api-key-here
@@ -37,7 +37,7 @@ HUGGINGFACE_API_KEY=your-huggingface-api-key-here
 ### Environment Variables
 Add these to your `.env` file:
 ```env
-OPENAI_API_KEY=sk-your-openai-key
+OPENROUTER_API_KEY=sk-or-v1-your-openrouter-key
 HUGGINGFACE_API_KEY=hf-your-huggingface-key
 N8N_WORKFLOW_URL=your-n8n-webhook-url
 ```
@@ -51,7 +51,7 @@ N8N_WORKFLOW_URL=your-n8n-webhook-url
 
 ### 2. **AI Response Generation**
 - Creates detailed prompts with emotion context
-- Sends to OpenAI API with specific instructions
+- Sends to OpenRouter API with Mistral model
 - Generates personalized, empathetic responses
 - Includes follow-up questions to encourage conversation
 

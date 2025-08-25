@@ -12,8 +12,8 @@ const AIConfiguration: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check if OpenAI key is already configured
-    const savedKey = localStorage.getItem('openai_api_key');
+    // Check if OpenRouter key is already configured
+    const savedKey = localStorage.getItem('openrouter_api_key');
     if (savedKey) {
       setOpenaiKey(savedKey);
       setIsConfigured(true);
@@ -29,53 +29,55 @@ const AIConfiguration: React.FC = () => {
     
     try {
       // Test the API key with a simple request
-      const response = await fetch('https://api.openai.com/v1/models', {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
         headers: {
           'Authorization': `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window?.location?.origin || 'http://localhost:3000',
+          'X-Title': 'Nous Emotion Mirror'
         }
       });
 
       if (response.ok) {
         // Save the key
-        localStorage.setItem('openai_api_key', openaiKey);
+        localStorage.setItem('openrouter_api_key', openaiKey);
         setIsConfigured(true);
         
         // Update environment variable for the session
         if (typeof window !== 'undefined') {
-          (window as any).OPENAI_API_KEY = openaiKey;
+          (window as any).OPENROUTER_API_KEY = openaiKey;
         }
       } else {
         throw new Error('Invalid API key');
       }
     } catch (error) {
       console.error('Error testing API key:', error);
-      alert('Invalid OpenAI API key. Please check your key and try again.');
+      alert('Invalid OpenRouter API key. Please check your key and try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRemoveKey = () => {
-    localStorage.removeItem('openai_api_key');
+    localStorage.removeItem('openrouter_api_key');
     setOpenaiKey('');
     setIsConfigured(false);
     
     if (typeof window !== 'undefined') {
-      delete (window as any).OPENAI_API_KEY;
+      delete (window as any).OPENROUTER_API_KEY;
     }
   };
 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="w-5 h-5" />
-          AI Configuration
-        </CardTitle>
-        <CardDescription>
-          Configure AI-powered emotional responses for personalized interactions
-        </CardDescription>
+                 <CardTitle className="flex items-center gap-2">
+           <Brain className="w-5 h-5" />
+           AI Configuration (OpenRouter + Mistral)
+         </CardTitle>
+         <CardDescription>
+           Configure AI-powered emotional responses using OpenRouter with Mistral model
+         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {isConfigured ? (
@@ -96,29 +98,29 @@ const AIConfiguration: React.FC = () => {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="openai-key" className="flex items-center gap-2">
-            <Key className="w-4 h-4" />
-            OpenAI API Key
-          </Label>
-          <Input
-            id="openai-key"
-            type="password"
-            placeholder="sk-..."
-            value={openaiKey}
-            onChange={(e) => setOpenaiKey(e.target.value)}
-            disabled={isConfigured}
-          />
-          <p className="text-xs text-muted-foreground">
-            Get your API key from{' '}
-            <a 
-              href="https://platform.openai.com/api-keys" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              OpenAI Platform
-            </a>
-          </p>
+                     <Label htmlFor="openrouter-key" className="flex items-center gap-2">
+             <Key className="w-4 h-4" />
+             OpenRouter API Key
+           </Label>
+           <Input
+             id="openrouter-key"
+             type="password"
+             placeholder="sk-or-v1-..."
+             value={openaiKey}
+             onChange={(e) => setOpenaiKey(e.target.value)}
+             disabled={isConfigured}
+           />
+           <p className="text-xs text-muted-foreground">
+             Get your API key from{' '}
+             <a 
+               href="https://openrouter.ai/keys" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="text-blue-600 hover:underline"
+             >
+               OpenRouter Platform
+             </a>
+           </p>
         </div>
 
         <div className="flex gap-2">
@@ -152,10 +154,11 @@ const AIConfiguration: React.FC = () => {
           </ul>
         </div>
 
-        <div className="text-xs text-muted-foreground">
-          <p><strong>Privacy:</strong> Your API key is stored locally and never shared. 
-          All AI interactions are processed through OpenAI's secure API.</p>
-        </div>
+                 <div className="text-xs text-muted-foreground">
+           <p><strong>Model:</strong> Using Mistral Small 3.2B (24B Instruct) via OpenRouter</p>
+           <p><strong>Privacy:</strong> Your API key is stored locally and never shared. 
+           All AI interactions are processed through OpenRouter's secure API.</p>
+         </div>
       </CardContent>
     </Card>
   );

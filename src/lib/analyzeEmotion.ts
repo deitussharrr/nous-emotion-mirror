@@ -683,21 +683,23 @@ export const generateAICustomizedResponse = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an empathetic AI companion that responds to users based on their emotional state. Your responses should be supportive, understanding, and tailored to the specific emotion detected. Use the appropriate tone and language style based on whether the user prefers Gen Z language or traditional language.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 200,
-        temperature: 0.7
-      })
+              body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 200,
+          temperature: 0.9, // Higher temperature for more creativity and variety
+          presence_penalty: 0.6, // Encourage new topics and ideas
+          frequency_penalty: 0.8 // Discourage repetitive language
+        })
     });
 
     if (!response.ok) {
@@ -705,7 +707,46 @@ export const generateAICustomizedResponse = async (
     }
 
     const data = await response.json();
-    return data.choices[0].message.content.trim();
+    let aiResponse = data.choices[0].message.content.trim();
+    
+    // Add extra variety by occasionally modifying the response
+    const varietyEnhancers = [
+      // Add random emojis for Gen Z style
+      (text: string) => useGenZ ? text.replace(/\./g, (match, index) => 
+        Math.random() > 0.7 ? match + [' ✨', ' 💫', ' 🔥', ' 💪', ' 🎯', ' 🌟'][Math.floor(Math.random() * 6)] : match
+      ) : text,
+      
+      // Add random conversational fillers
+      (text: string) => Math.random() > 0.8 ? 
+        ['You know what? ', 'Honestly, ', 'I gotta say, ', 'Listen, '][Math.floor(Math.random() * 4)] + text : text,
+      
+      // Add random emphasis
+      (text: string) => Math.random() > 0.85 ? 
+        text.replace(/\b(\w+)\b/g, (match, word) => 
+          Math.random() > 0.9 ? `*${match}*` : match
+        ) : text,
+      
+      // Add random follow-up variations
+      (text: string) => {
+        const followUps = [
+          ' What do you think?',
+          ' How does that sound?',
+          ' What\'s your take on that?',
+          ' Does that resonate with you?',
+          ' What\'s your perspective?'
+        ];
+        return Math.random() > 0.75 ? text + followUps[Math.floor(Math.random() * followUps.length)] : text;
+      }
+    ];
+    
+    // Apply random variety enhancers
+    varietyEnhancers.forEach(enhancer => {
+      if (Math.random() > 0.5) {
+        aiResponse = enhancer(aiResponse);
+      }
+    });
+    
+    return aiResponse;
 
   } catch (error) {
     console.error('Error generating AI response:', error);
@@ -730,92 +771,6 @@ const createAIPrompt = (
     ? 'Use Gen Z language with modern slang, emojis, and casual expressions like "rn", "literally", "vibes", etc.'
     : 'Use traditional, supportive language with proper grammar and empathetic tone.';
 
-  let emotionContext = '';
-  
-  // Add emotion-specific context
-  switch (emotion) {
-    case 'vibing':
-      emotionContext = 'The user is feeling positive and energetic. Acknowledge their good mood and ask what\'s contributing to it.';
-      break;
-    case 'bossed':
-      emotionContext = 'The user is feeling confident and accomplished. Celebrate their success and confidence.';
-      break;
-    case 'stressed':
-      emotionContext = 'The user is feeling overwhelmed and anxious. Offer support and understanding without minimizing their feelings.';
-      break;
-    case 'depressed':
-      emotionContext = 'The user is feeling down and low. Provide gentle support and validation.';
-      break;
-    case 'anxious':
-      emotionContext = 'The user is feeling worried and nervous. Help them feel heard and supported.';
-      break;
-    case 'excited':
-      emotionContext = 'The user is feeling thrilled and enthusiastic. Share in their excitement and ask for details.';
-      break;
-    case 'lonely':
-      emotionContext = 'The user is feeling isolated and disconnected. Offer connection and understanding.';
-      break;
-    case 'angry':
-      emotionContext = 'The user is feeling frustrated or angry. Acknowledge their feelings as valid and help them process.';
-      break;
-    case 'grateful':
-      emotionContext = 'The user is feeling thankful and appreciative. Acknowledge their gratitude and positive mindset.';
-      break;
-    case 'inspired':
-      emotionContext = 'The user is feeling motivated and creative. Support their inspiration and ask about their ideas.';
-      break;
-    case 'tired':
-      emotionContext = 'The user is feeling exhausted and drained. Offer understanding and support for their need to rest.';
-      break;
-    case 'hopeful':
-      emotionContext = 'The user is feeling optimistic about the future. Support their positive outlook.';
-      break;
-    case 'proud':
-      emotionContext = 'The user is feeling accomplished and satisfied. Celebrate their achievements with them.';
-      break;
-    case 'sad':
-      emotionContext = 'The user is feeling unhappy and sorrowful. Provide gentle comfort and understanding.';
-      break;
-    case 'confused':
-      emotionContext = 'The user is feeling uncertain and unclear. Help them find clarity and understanding.';
-      break;
-    case 'cringe':
-      emotionContext = 'The user is feeling embarrassed or awkward. Offer understanding and normalize the feeling.';
-      break;
-    case 'savage':
-      emotionContext = 'The user is feeling bold and fearless. Support their confidence and boldness.';
-      break;
-    case 'soft':
-      emotionContext = 'The user is feeling vulnerable and emotional. Provide gentle, caring support.';
-      break;
-    case 'lit':
-      emotionContext = 'The user is feeling hyped and energetic. Share in their excitement and enthusiasm.';
-      break;
-    case 'blessed':
-      emotionContext = 'The user is feeling fortunate and grateful. Acknowledge their positive perspective.';
-      break;
-    case 'overwhelmed':
-      emotionContext = 'The user is feeling like they have too much to handle. Offer support and help them break things down.';
-      break;
-    case 'frustrated':
-      emotionContext = 'The user is feeling annoyed and irritated. Acknowledge their frustration and help them process it.';
-      break;
-    case 'peaceful':
-      emotionContext = 'The user is feeling calm and content. Acknowledge their peaceful state.';
-      break;
-    case 'nervous':
-      emotionContext = 'The user is feeling anxious and jittery. Help them feel more grounded and supported.';
-      break;
-    case 'mood':
-      emotionContext = 'The user is in a general emotional state. Ask them to elaborate on how they\'re feeling.';
-      break;
-    case 'neutral':
-      emotionContext = 'The user is feeling balanced and neither particularly positive nor negative. Check in on their overall wellbeing.';
-      break;
-    default:
-      emotionContext = 'The user is experiencing an emotion. Provide supportive and understanding response.';
-  }
-
   // Add context about emotion intensity
   const intensityContext = `The emotion intensity is ${intensity}. `;
   
@@ -829,29 +784,63 @@ const createAIPrompt = (
     ? `Recent conversation context: ${conversationHistory.slice(-3).map(msg => msg.content).join(' | ')}. `
     : '';
 
-  return `Generate a personalized response for a user who wrote: "${userMessage}"
+  // Create a more dynamic, creative prompt that encourages variety
+  const creativePrompts = [
+    `You're an empathetic AI companion responding to someone who wrote: "${userMessage}"
+    
+    Emotion detected: ${emotion} (${intensity} intensity, score: ${score})
+    ${transitionContext}${historyContext}
+    
+    Language style: ${languageStyle}
+    
+    Create a unique, fresh response that:
+    - Feels completely natural and unrehearsed
+    - Shows genuine understanding of their specific emotion
+    - Uses creative, varied language (avoid repetitive phrases)
+    - Includes a thoughtful follow-up question
+    - Stays under 150 words
+    - Feels like a real friend responding, not a template
+    
+    Be creative and authentic in your response:`,
+    
+    `A user just shared: "${userMessage}"
+    
+    I detected they're feeling: ${emotion} (${intensity} level)
+    ${transitionContext}${historyContext}
+    
+    Respond in ${useGenZ ? 'Gen Z style' : 'traditional style'}.
+    
+    Write a completely unique response that:
+    - Sounds like a real person, not a chatbot
+    - Acknowledges their specific emotion in a fresh way
+    - Uses varied vocabulary and sentence structures
+    - Asks an engaging follow-up question
+    - Keeps it conversational and under 150 words
+    
+    Make it feel like a genuine, one-of-a-kind response:`,
+    
+    `Someone wrote: "${userMessage}"
+    
+    Emotion analysis: ${emotion} (${intensity} intensity)
+    ${transitionContext}${historyContext}
+    
+    Style: ${languageStyle}
+    
+    Craft a response that's:
+    - Completely original and unrepeatable
+    - Emotionally attuned to their specific feeling
+    - Written in natural, varied language
+    - Engaging and conversation-starting
+    - Under 150 words
+    - Authentic and human-like
+    
+    Create something unique and personal:`
+  ];
 
-Emotion Analysis:
-- Detected emotion: ${emotion}
-- Emotion intensity: ${intensity} (score: ${score})
-- ${emotionContext}
-- ${intensityContext}
-- ${transitionContext}
-- ${historyContext}
-
-Language Style: ${languageStyle}
-
-Requirements:
-1. Keep response under 150 words
-2. Be empathetic and supportive
-3. Ask a follow-up question to encourage conversation
-4. Match the detected emotion and intensity
-5. Use appropriate language style (Gen Z or traditional)
-6. Include relevant emojis if using Gen Z style
-7. Don't be overly clinical or robotic
-8. Show genuine care and understanding
-
-Generate a natural, conversational response:`;
+  // Randomly select a creative prompt to ensure variety
+  const randomPrompt = creativePrompts[Math.floor(Math.random() * creativePrompts.length)];
+  
+  return randomPrompt;
 };
 
 // Enhanced trigger function that uses AI for responses

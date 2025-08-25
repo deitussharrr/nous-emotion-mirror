@@ -285,6 +285,7 @@ export const analyzeEmotion = async (text: string) => {
     } else if (lowerText.includes("sad") || lowerText.includes("unhappy") || lowerText.includes("sorrowful")) {
       fallbackEmotion = "sad";
       fallbackScore = 0.7;
+    }
 
     return {
       label: fallbackEmotion,

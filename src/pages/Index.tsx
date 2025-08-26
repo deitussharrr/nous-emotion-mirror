@@ -343,9 +343,11 @@ const Index: React.FC = () => {
                   previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
                 />
               </div>
-              <div className="lg:col-span-3 glass-card card-gradient rounded-lg p-4">
-                <EmotionGraph emotionData={getEmotionData()} />
-              </div>
+              {false && (
+                <div className="lg:col-span-3 glass-card card-gradient rounded-lg p-4">
+                  <EmotionGraph emotionData={getEmotionData()} />
+                </div>
+              )}
             </div>
           )}
           

@@ -8,8 +8,11 @@ import { Brain, Key, Settings, CheckCircle, AlertCircle } from 'lucide-react';
 
 const AIConfiguration: React.FC = () => {
   const [openaiKey, setOpenaiKey] = useState<string>('');
+  const [model, setModel] = useState<string>(localStorage.getItem('openrouter_model') || (import.meta as any)?.env?.VITE_OPENROUTER_MODEL || 'mistralai/mistral-small-3.2-24b-instruct:free');
   const [isConfigured, setIsConfigured] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hfModel, setHfModel] = useState<string>(localStorage.getItem('hf_response_model') || (import.meta as any)?.env?.VITE_HF_RESPONSE_MODEL || 'CohereLabs/command-a-reasoning-08-2025');
+  const [hfKey, setHfKey] = useState<string>(localStorage.getItem('hf_api_key') || '');
 
   useEffect(() => {
     // Check if OpenRouter key is already configured
@@ -67,6 +70,23 @@ const AIConfiguration: React.FC = () => {
     if (typeof window !== 'undefined') {
       delete (window as any).OPENROUTER_API_KEY;
     }
+  };
+
+  const handleSaveModel = () => {
+    const value = model.trim();
+    if (!value) return;
+    localStorage.setItem('openrouter_model', value);
+    alert('Response model saved.');
+  };
+
+  const handleSaveHf = () => {
+    if (hfKey.trim()) {
+      localStorage.setItem('hf_api_key', hfKey.trim());
+    }
+    if (hfModel.trim()) {
+      localStorage.setItem('hf_response_model', hfModel.trim());
+    }
+    alert('Hugging Face settings saved.');
   };
 
   return (
@@ -142,6 +162,39 @@ const AIConfiguration: React.FC = () => {
               Disable AI
             </Button>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="model">Response Model</Label>
+          <div className="flex gap-2">
+            <Input
+              id="model"
+              placeholder="meta-llama/llama-3.1-70b-instruct:free"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+            />
+            <Button variant="secondary" onClick={handleSaveModel}>Save</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Set any OpenRouter model slug. Examples: meta-llama/..., google/gemma-..., anthropic/claude-...</p>
+        </div>
+
+        <div className="space-y-2 pt-2">
+          <Label>Hugging Face (Preferred if configured)</Label>
+          <Input
+            placeholder="hf_..."
+            type="password"
+            value={hfKey}
+            onChange={(e) => setHfKey(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Input
+              placeholder="CohereLabs/command-a-reasoning-08-2025"
+              value={hfModel}
+              onChange={(e) => setHfModel(e.target.value)}
+            />
+            <Button variant="secondary" onClick={handleSaveHf}>Save</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Responses will use this HF model when a key is set. Falls back to OpenRouter otherwise.</p>
         </div>
 
         <div className="text-xs text-muted-foreground space-y-1">

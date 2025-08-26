@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { deleteEntry, exportEntries, importEntries, getEntriesByDay } from '@/lib/localStorage';
+import { deleteEntry, exportEntries, importEntries } from '@/lib/localStorage';
 import DailyEmotions from '@/components/DailyEmotions';
 import ConversationSummary from '@/components/ConversationSummary';
 
@@ -16,7 +16,19 @@ interface JournalHistoryProps {
 }
 
 const JournalHistory: React.FC<JournalHistoryProps> = ({ entries, onEntriesUpdate, onContinueNote }) => {
-  const entriesByDay = getEntriesByDay();
+  // Group incoming entries by day to reflect latest in-memory state
+  const entriesByDay: { [key: string]: JournalEntry[] } = React.useMemo(() => {
+    const grouped: { [key: string]: JournalEntry[] } = {};
+    entries.forEach((entry) => {
+      const day = format(new Date(entry.timestamp), 'yyyy-MM-dd');
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(entry);
+    });
+    // Ensure order by latest day first
+    return Object.fromEntries(
+      Object.entries(grouped).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+    );
+  }, [entries]);
   
   const handleDelete = (id: string) => {
     deleteEntry(id);

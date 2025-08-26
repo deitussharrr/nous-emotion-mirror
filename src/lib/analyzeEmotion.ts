@@ -3,20 +3,10 @@ import { EmotionType, EmotionResult } from "../types";
 
 // Updated with the facebook/bart-large-mnli model for Gen Z emotion detection
 const EMOTION_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-mnli";
-// Secure: resolve HF key from env or window, not hardcoded
-const resolveHfKey = (): string | undefined => {
-  if (typeof window !== 'undefined') {
-    // Allow overriding via window for client env
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const winKey = (window as any)?.HUGGINGFACE_API_KEY as string | undefined;
-    if (winKey) return winKey;
-  }
-  // Vite exposes import.meta.env at build-time
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const envKey = (import.meta as any)?.env?.VITE_HUGGINGFACE_API_KEY as string | undefined;
-  return envKey;
-};
-const HF_API_KEY = resolveHfKey();
+// Hugging Face API key should come from env or localStorage for dev
+const HF_API_KEY =
+  (typeof window !== 'undefined' ? localStorage.getItem('hf_api_key') : undefined) ||
+  (import.meta as any)?.env?.VITE_HF_API_KEY;
 
 // Gen Z specific emotion categories with modern language
 const GENZ_EMOTION_CATEGORIES = [
@@ -64,7 +54,7 @@ const NEGATIVE_EMOTIONS = [
   "disappointment"
 ];
 
-export const getEmotionColor = (emotion: EmotionType): string => {
+export const getEmotionColor = (emotion: EmotionType | string): string => {
   // Gen Z emotion color palette with modern, vibrant colors
   switch (emotion) {
     // Positive/High Energy Emotions
@@ -160,9 +150,7 @@ export const analyzeEmotion = async (text: string) => {
   }
 
   try {
-    if (import.meta.env?.MODE === 'development') {
-      console.log("[EmotionAnalysis] Sending request to BART-large-MNLI for Gen Z emotion detection");
-    }
+    console.log("[EmotionAnalysis] Sending request to BART-large-MNLI for Gen Z emotion detection");
     
     // Prepare the request for BART-large-MNLI zero-shot classification
     const requestBody = {
@@ -183,9 +171,7 @@ export const analyzeEmotion = async (text: string) => {
       body: JSON.stringify(requestBody),
     });
 
-    if (import.meta.env?.MODE === 'development') {
-      console.log("[EmotionAnalysis] API Response status:", response.status);
-    }
+    console.log("[EmotionAnalysis] API Response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -197,9 +183,7 @@ export const analyzeEmotion = async (text: string) => {
     }
 
     const data = await response.json();
-    if (import.meta.env?.MODE === 'development') {
-      console.log("[EmotionAnalysis] Raw API data:", data);
-    }
+    console.log("[EmotionAnalysis] Raw API data:", data);
 
     // The expected output from BART-large-MNLI is:
     // {
@@ -213,9 +197,7 @@ export const analyzeEmotion = async (text: string) => {
       const topEmotion = data.labels[topIndex];
       const topScore = data.scores[topIndex];
 
-      if (import.meta.env?.MODE === 'development') {
-        console.log("Top Gen Z emotion:", topEmotion, "with score:", topScore);
-      }
+      console.log("Top Gen Z emotion:", topEmotion, "with score:", topScore);
 
       // Get top 3 emotions for context
       const topEmotions = data.labels
@@ -392,7 +374,7 @@ export const triggerEmotionalResponseWorkflow = async (
 
 // Enhanced local fallback response function with Gen Z lingo
 const getLocalFallbackResponse = (
-  emotion: EmotionType,
+  emotion: EmotionType | string,
   useGenZ: boolean = false,
   previousEmotion?: string,
   emotionScore?: number
@@ -687,17 +669,78 @@ export const generateAICustomizedResponse = async (
     // Create a detailed prompt for AI response generation
     const prompt = createAIPrompt(userMessage, emotionResult, useGenZ, previousEmotion, conversationHistory);
     
-        // Get API key from localStorage or environment
+    // Prefer Hugging Face for responses if key present, else OpenRouter
+    const hfApiKey = (typeof window !== 'undefined' 
+      ? localStorage.getItem('hf_api_key') 
+      : undefined) || (import.meta as any)?.env?.VITE_HF_API_KEY;
+
+    if (hfApiKey) {
+      const hfModel = (typeof window !== 'undefined'
+        ? localStorage.getItem('hf_response_model')
+        : undefined) || (import.meta as any)?.env?.VITE_HF_RESPONSE_MODEL || 'CohereLabs/command-a-reasoning-08-2025';
+
+      const hfResp = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${hfApiKey}`,
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 220,
+            temperature: 0.9,
+            do_sample: true,
+            return_full_text: false
+          }
+        })
+      });
+
+      if (!hfResp.ok) {
+        throw new Error(`HF API request failed: ${hfResp.status}`);
+      }
+
+      const hfData = await hfResp.json();
+      let aiResponseFromHf = '' as string;
+      if (Array.isArray(hfData) && hfData.length > 0) {
+        aiResponseFromHf = (hfData[0]?.generated_text || hfData[0]?.summary_text || '').trim();
+      } else if (hfData && typeof hfData === 'object') {
+        aiResponseFromHf = (hfData.generated_text || hfData.summary_text || '').trim();
+      }
+
+      if (!aiResponseFromHf) {
+        return getLocalFallbackResponse(emotionResult.label, useGenZ, previousEmotion, emotionResult.score);
+      }
+
+      // Apply variety enhancers
+      const enhancers = [
+        (text: string) => useGenZ ? text.replace(/\./g, (match) => Math.random() > 0.7 ? match + [' ✨', ' 💫', ' 🔥', ' 💪', ' 🎯', ' 🌟'][Math.floor(Math.random() * 6)] : match) : text,
+        (text: string) => Math.random() > 0.8 ? ['You know what? ', 'Honestly, ', 'I gotta say, ', 'Listen, '][Math.floor(Math.random() * 4)] + text : text,
+        (text: string) => Math.random() > 0.85 ? text.replace(/\b(\w+)\b/g, (m) => Math.random() > 0.9 ? `*${m}*` : m) : text,
+        (text: string) => {
+          const followUps = [' What do you think?', ' How does that sound?', " What's your take on that?", ' Does that resonate with you?', " What's your perspective?"];
+          return Math.random() > 0.75 ? text + followUps[Math.floor(Math.random() * followUps.length)] : text;
+        }
+      ];
+      let finalText = aiResponseFromHf;
+      enhancers.forEach(fn => { if (Math.random() > 0.5) finalText = fn(finalText); });
+      return finalText;
+    }
+
+    // OpenRouter path
     const apiKey = typeof window !== 'undefined' 
       ? localStorage.getItem('openrouter_api_key') || (window as any).OPENROUTER_API_KEY
-      : process.env.OPENROUTER_API_KEY || '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';
-    
+      : (import.meta as any)?.env?.VITE_OPENROUTER_API_KEY;
     if (!apiKey) {
       throw new Error('OpenRouter API key not configured');
     }
-    
-    // Use OpenRouter API with Mistral model for response generation
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const configuredModel = (typeof window !== 'undefined' 
+      ? localStorage.getItem('openrouter_model') 
+      : undefined) 
+      || (import.meta as any)?.env?.VITE_OPENROUTER_MODEL 
+      || 'meta-llama/llama-3.1-70b-instruct:free';
+
+    const response = await fetch((import.meta as any)?.env?.VITE_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -706,61 +749,20 @@ export const generateAICustomizedResponse = async (
         'X-Title': 'Nous Emotion Mirror'
       },
       body: JSON.stringify({
-        model: 'mistralai/mistral-small-3.2-24b-instruct:free',
+        model: configuredModel,
         messages: [
-          {
-            role: 'system',
-            content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
+          { role: 'system', content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.' },
+          { role: 'user', content: prompt }
         ],
         max_tokens: 200,
-        temperature: 0.9, // Higher temperature for more creativity and variety
-        presence_penalty: 0.6, // Encourage new topics and ideas
-        frequency_penalty: 0.8 // Discourage repetitive language
+        temperature: 0.9,
+        presence_penalty: 0.6,
+        frequency_penalty: 0.8
       })
     });
 
     if (!response.ok) {
-      // Basic retry with backoff (3 attempts)
-      const tryOnce = async (delayMs: number) => {
-        await new Promise(r => setTimeout(r, delayMs));
-        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': window?.location?.origin || 'http://localhost:3000',
-            'X-Title': 'Nous Emotion Mirror'
-          },
-          body: JSON.stringify({
-            model: 'mistralai/mistral-small-3.2-24b-instruct:free',
-            messages: [
-              { role: 'system', content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.' },
-              { role: 'user', content: prompt }
-            ],
-            max_tokens: 200,
-            temperature: 0.9,
-            presence_penalty: 0.6,
-            frequency_penalty: 0.8
-          })
-        });
-        return r;
-      };
-      const r2 = await tryOnce(500);
-      if (!r2.ok) {
-        const r3 = await tryOnce(1200);
-        if (!r3.ok) {
-          throw new Error(`AI API request failed after retries: ${response.status}`);
-        }
-        const d3 = await r3.json();
-        return d3.choices[0].message.content.trim();
-      }
-      const d2 = await r2.json();
-      return d2.choices[0].message.content.trim();
+      throw new Error(`AI API request failed: ${response.status}`);
     }
 
     const data = await response.json();

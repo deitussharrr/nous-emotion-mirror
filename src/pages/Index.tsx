@@ -248,10 +248,11 @@ const Index: React.FC = () => {
   const previousEmotions = entries.slice(0, 3).map(entry => entry.emotion);
   
   return (
-    <div className="min-h-screen bg-nousBackground text-nousText-primary">
+    <div className="min-h-screen bg-nousBackground text-nousText-primary bg-animated">
       <Analytics />
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-        <header className="flex items-center justify-between">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+        <header className="glass-header rounded-xl px-4 py-3 flex items-center justify-between animate-fade-in relative overflow-hidden">
+          <div className="grid-overlay"></div>
           <Logo />
           <nav className="flex space-x-2">
             <button
@@ -259,54 +260,42 @@ const Index: React.FC = () => {
                 setActiveTab('journal');
                 // Don't reset active note, so users can go back to history and continue the same note
               }}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'journal' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'journal' ? 'nav-button--active' : ''}`}
               title="New Note"
             >
               <Book className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'history' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'history' ? 'nav-button--active' : ''}`}
               title="My Notes"
             >
               <History className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('search')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'search' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'search' ? 'nav-button--active' : ''}`}
               title="Search Notes"
             >
               <Search className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('analysis')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'analysis' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'analysis' ? 'nav-button--active' : ''}`}
               title="Mood Analysis"
             >
               <ChartLine className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('checkins')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'checkins' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'checkins' ? 'nav-button--active' : ''}`}
               title="Settings"
             >
               <Bell className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('emergency')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'emergency' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'emergency' ? 'nav-button--active' : ''}`}
               title="Emergency Response Settings"
             >
               <AlertTriangle className="w-5 h-5" />
@@ -314,11 +303,11 @@ const Index: React.FC = () => {
           </nav>
         </header>
         
-        <main className="space-y-6">
+        <main className="space-y-6 pb-20">
           {activeTab === 'journal' && (
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {activeNoteId && (
-                <div className="flex justify-between items-center">
+                <div className="lg:col-span-3 glass-card rounded-lg p-4 flex justify-between items-center">
                   <h2 className="text-xl font-medium">
                     {activeNoteTitle || 'Continuing your note...'}
                   </h2>
@@ -331,24 +320,34 @@ const Index: React.FC = () => {
                 </div>
               )}
               
-              <LanguageToggle useGenZ={useGenZ} setUseGenZ={(value) => {
-                setUseGenZ(value);
-                localStorage.setItem('useGenZ', String(value));
-              }} />
-              
-              <JournalInput 
-                onAnalyze={handleAnalyzeEmotion} 
-                isLoading={isLoading}
-                lastEmotion={currentEmotion?.label}
-                activeNoteId={activeNoteId || undefined}
-                existingMessages={activeNoteMessages}
-              />
-              <EmotionDisplay 
-                emotion={currentEmotion} 
-                isLoading={isLoading}
-                previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
-              />
-              <EmotionGraph emotionData={getEmotionData()} />
+              <div className="lg:col-span-2 glass-card card-gradient rounded-lg p-4">
+                <JournalInput 
+                  onAnalyze={handleAnalyzeEmotion} 
+                  isLoading={isLoading}
+                  lastEmotion={currentEmotion?.label}
+                  activeNoteId={activeNoteId || undefined}
+                  existingMessages={activeNoteMessages}
+                />
+              </div>
+              <div className="glass-card card-gradient rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm uppercase tracking-wide text-nousText-muted holo-text">Style</h3>
+                  <LanguageToggle useGenZ={useGenZ} setUseGenZ={(value) => {
+                    setUseGenZ(value);
+                    localStorage.setItem('useGenZ', String(value));
+                  }} />
+                </div>
+                <EmotionDisplay 
+                  emotion={currentEmotion} 
+                  isLoading={isLoading}
+                  previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
+                />
+              </div>
+              {false && (
+                <div className="lg:col-span-3 glass-card card-gradient rounded-lg p-4">
+                  <EmotionGraph emotionData={getEmotionData()} />
+                </div>
+              )}
             </div>
           )}
           
@@ -385,6 +384,26 @@ const Index: React.FC = () => {
             <EmergencyContactForm />
           )}
         </main>
+        {/* Mobile bottom nav */}
+        <nav className="fixed bottom-3 left-0 right-0 z-40 mx-auto max-w-md w-[calc(100%-1.5rem)] sm:hidden">
+          <div className="glass-header rounded-2xl px-3 py-2 flex items-center justify-around">
+            <button onClick={() => setActiveTab('journal')} className={`nav-button ${activeTab === 'journal' ? 'nav-button--active' : ''}`}>
+              <Book className="w-5 h-5" />
+            </button>
+            <button onClick={() => setActiveTab('history')} className={`nav-button ${activeTab === 'history' ? 'nav-button--active' : ''}`}>
+              <History className="w-5 h-5" />
+            </button>
+            <button onClick={() => setActiveTab('search')} className={`nav-button ${activeTab === 'search' ? 'nav-button--active' : ''}`}>
+              <Search className="w-5 h-5" />
+            </button>
+            <button onClick={() => setActiveTab('analysis')} className={`nav-button ${activeTab === 'analysis' ? 'nav-button--active' : ''}`}>
+              <ChartLine className="w-5 h-5" />
+            </button>
+            <button onClick={() => setActiveTab('checkins')} className={`nav-button ${activeTab === 'checkins' ? 'nav-button--active' : ''}`}>
+              <Bell className="w-5 h-5" />
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   );

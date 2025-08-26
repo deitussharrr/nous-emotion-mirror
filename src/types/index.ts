@@ -27,10 +27,10 @@ export type EmotionType =
   
   // Legacy emotions (keeping for backward compatibility)
   | 'admiration' | 'amusement' | 'annoyance' | 'approval' | 'caring'
-  | 'curiosity' | 'desire' | 'disappointment' | 'disapproval' | 'disgust'
+  | 'confusion' | 'curiosity' | 'desire' | 'disappointment' | 'disapproval' | 'disgust'
   | 'embarrassment' | 'excitement' | 'fear' | 'grief' | 'love'
   | 'nervousness' | 'optimism' | 'realization' | 'relief' | 'remorse'
-  | 'surprise' | 'neutral' | 'distress';
+  | 'surprise' | 'neutral' | 'distress' | 'joy' | 'sadness' | 'gratitude' | 'pride' | 'anger';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';

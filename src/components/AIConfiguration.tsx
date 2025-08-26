@@ -47,6 +47,7 @@ const AIConfiguration: React.FC = () => {
         if (typeof window !== 'undefined') {
           (window as any).OPENROUTER_API_KEY = openaiKey;
         }
+        alert('OpenRouter API key saved locally for this browser.');
       } else {
         throw new Error('Invalid API key');
       }

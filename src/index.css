@@ -67,6 +67,15 @@
   .glass-card {
     @apply backdrop-blur-sm bg-white/5 border border-white/10 shadow-lg;
   }
+  .glass-header {
+    @apply backdrop-blur-md bg-black/20 border border-white/10 shadow-neus;
+  }
+  .nav-button {
+    @apply p-2 rounded-lg transition-colors text-nousText-muted hover:bg-white/5 hover:text-white;
+  }
+  .nav-button--active {
+    @apply bg-nousPurple text-white shadow-neus;
+  }
   
   .btn-primary {
     @apply bg-nousPurple hover:bg-nousPurple-light transition-colors text-white px-6 py-3 rounded-lg font-medium shadow-neus;

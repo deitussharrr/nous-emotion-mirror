@@ -251,7 +251,7 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-nousBackground text-nousText-primary">
       <Analytics />
       <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-        <header className="flex items-center justify-between">
+        <header className="glass-header rounded-xl px-4 py-3 flex items-center justify-between animate-fade-in">
           <Logo />
           <nav className="flex space-x-2">
             <button
@@ -259,54 +259,42 @@ const Index: React.FC = () => {
                 setActiveTab('journal');
                 // Don't reset active note, so users can go back to history and continue the same note
               }}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'journal' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'journal' ? 'nav-button--active' : ''}`}
               title="New Note"
             >
               <Book className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'history' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'history' ? 'nav-button--active' : ''}`}
               title="My Notes"
             >
               <History className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('search')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'search' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'search' ? 'nav-button--active' : ''}`}
               title="Search Notes"
             >
               <Search className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('analysis')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'analysis' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'analysis' ? 'nav-button--active' : ''}`}
               title="Mood Analysis"
             >
               <ChartLine className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('checkins')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'checkins' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'checkins' ? 'nav-button--active' : ''}`}
               title="Settings"
             >
               <Bell className="w-5 h-5" />
             </button>
             <button
               onClick={() => setActiveTab('emergency')}
-              className={`p-2 rounded-lg transition-colors ${
-                activeTab === 'emergency' ? 'bg-nousPurple text-white' : 'text-nousText-muted hover:bg-white/5'
-              }`}
+              className={`nav-button ${activeTab === 'emergency' ? 'nav-button--active' : ''}`}
               title="Emergency Response Settings"
             >
               <AlertTriangle className="w-5 h-5" />

@@ -3,8 +3,10 @@ import { EmotionType, EmotionResult } from "../types";
 
 // Updated with the facebook/bart-large-mnli model for Gen Z emotion detection
 const EMOTION_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-mnli";
-// NOTE: Make sure to set a valid Hugging Face API Key in the code below!
-const API_KEY = "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"; // <-- Your provided Hugging Face API Key!
+// Hugging Face API key should come from env or localStorage for dev
+const HF_API_KEY =
+  (typeof window !== 'undefined' ? localStorage.getItem('hf_api_key') : undefined) ||
+  (import.meta as any)?.env?.VITE_HF_API_KEY;
 
 // Gen Z specific emotion categories with modern language
 const GENZ_EMOTION_CATEGORIES = [
@@ -52,7 +54,7 @@ const NEGATIVE_EMOTIONS = [
   "disappointment"
 ];
 
-export const getEmotionColor = (emotion: EmotionType): string => {
+export const getEmotionColor = (emotion: EmotionType | string): string => {
   // Gen Z emotion color palette with modern, vibrant colors
   switch (emotion) {
     // Positive/High Energy Emotions
@@ -164,7 +166,7 @@ export const analyzeEmotion = async (text: string) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`,
+        ...(HF_API_KEY ? { "Authorization": `Bearer ${HF_API_KEY}` } : {}),
       },
       body: JSON.stringify(requestBody),
     });
@@ -372,7 +374,7 @@ export const triggerEmotionalResponseWorkflow = async (
 
 // Enhanced local fallback response function with Gen Z lingo
 const getLocalFallbackResponse = (
-  emotion: EmotionType,
+  emotion: EmotionType | string,
   useGenZ: boolean = false,
   previousEmotion?: string,
   emotionScore?: number
@@ -667,10 +669,10 @@ export const generateAICustomizedResponse = async (
     // Create a detailed prompt for AI response generation
     const prompt = createAIPrompt(userMessage, emotionResult, useGenZ, previousEmotion, conversationHistory);
     
-        // Get API key from localStorage or environment
+        // Get API key from localStorage or Vite env (no hardcoded fallback)
     const apiKey = typeof window !== 'undefined' 
       ? localStorage.getItem('openrouter_api_key') || (window as any).OPENROUTER_API_KEY
-      : process.env.OPENROUTER_API_KEY || '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';
+      : (import.meta as any)?.env?.VITE_OPENROUTER_API_KEY;
     
     if (!apiKey) {
       throw new Error('OpenRouter API key not configured');

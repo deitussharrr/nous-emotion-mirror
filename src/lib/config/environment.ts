@@ -2,7 +2,7 @@
 
 // N8n webhook configuration
 export const N8N_CONFIG = {
-  WEBHOOK_URL: process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL,
+  WEBHOOK_URL: import.meta.env.VITE_N8N_WEBHOOK_URL as string | undefined,
 };
 
 // Validate environment configuration

@@ -9,11 +9,11 @@ export interface JournalEntry {
 }
 
 export interface EmotionResult {
-  label: string;
+  label: EmotionType;
   score: number;
   color: string;
   feedback?: string;
-  emotions?: Array<{label: string; score: number}>;
+  emotions?: Array<{label: EmotionType; score: number}>;
 }
 
 // Gen Z emotion types for modern language detection
@@ -26,11 +26,12 @@ export type EmotionType =
   | 'proud' | 'nervous' | 'happy' | 'sad'
   
   // Legacy emotions (keeping for backward compatibility)
+  | 'joy' | 'sadness' | 'anger'
   | 'admiration' | 'amusement' | 'annoyance' | 'approval' | 'caring'
-  | 'confusion' | 'curiosity' | 'desire' | 'disappointment' | 'disapproval' | 'disgust'
-  | 'embarrassment' | 'excitement' | 'fear' | 'grief' | 'love'
-  | 'nervousness' | 'optimism' | 'realization' | 'relief' | 'remorse'
-  | 'surprise' | 'neutral' | 'distress' | 'joy' | 'sadness' | 'gratitude' | 'pride' | 'anger';
+  | 'curiosity' | 'desire' | 'disappointment' | 'disapproval' | 'disgust'
+  | 'embarrassment' | 'excitement' | 'fear' | 'grief' | 'love' | 'gratitude'
+  | 'nervousness' | 'optimism' | 'realization' | 'relief' | 'remorse' | 'pride' | 'confusion'
+  | 'surprise' | 'neutral' | 'distress';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';

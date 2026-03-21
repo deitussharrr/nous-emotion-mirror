@@ -1,12 +1,13 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType, EmotionResult } from "../types";
+import { checkRateLimit } from "./rateLimit";
 
-// Updated with the facebook/bart-large-mnli model for Gen Z emotion detection
-const EMOTION_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-mnli";
-// Hugging Face API key should come from env or localStorage for dev
-const HF_API_KEY =
-  (typeof window !== 'undefined' ? localStorage.getItem('hf_api_key') : undefined) ||
-  (import.meta as any)?.env?.VITE_HF_API_KEY;
+// Updated to use NVIDIA NIM models for emotion detection
+const EMOTION_API_URL = "https://integrate.api.nvidia.com/v1/models/meta/llama-3.1-8b-instruct/chat/completions";
+// NVIDIA NIM API key should come from env or localStorage
+const NIM_API_KEY =
+  (typeof window !== 'undefined' ? localStorage.getItem('nim_api_key') : undefined) ||
+  (import.meta as ImportMeta)?.env?.VITE_NIM_API_KEY;
 
 // Gen Z specific emotion categories with modern language
 const GENZ_EMOTION_CATEGORIES = [
@@ -40,8 +41,8 @@ const GENZ_EMOTION_CATEGORIES = [
   "neutral"           // Balanced, neither positive nor negative
 ];
 
-// N8N Workflow Configuration - Updated URL
-const N8N_WORKFLOW_URL = "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
+// N8N Workflow Configuration - Use environment variable
+const N8N_WORKFLOW_URL = (import.meta as ImportMeta)?.env?.VITE_N8N_WEBHOOK_URL || "https://pumped-sincerely-coyote.ngrok-free.app/webhook/emotional-response-webhook";
 
 // --- Add this definition ---
 const NEGATIVE_EMOTIONS = [
@@ -127,7 +128,25 @@ export const getEmotionColor = (emotion: EmotionType | string): string => {
   }
 };
 
-export const analyzeEmotion = async (text: string) => {
+// Input sanitization function
+const sanitizeInput = (text: string): string => {
+  // Remove potential script tags and malicious content
+  return text
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .trim();
+};
+
+export const analyzeEmotion = async (text: string, userIdentifier?: string) => {
+  // Apply rate limiting if user identifier is provided
+  if (userIdentifier && !checkRateLimit(userIdentifier)) {
+    throw new Error("Rate limit exceeded. Please wait before making another request.");
+  }
+  
+  // Sanitize input first
+  const sanitizedText = sanitizeInput(text);
+  
   // --- 1. Explicit check for suicidal ideation / self-harm ---
   const distressPhrases = [
     "kill myself", "end my life", "suicide", "die by suicide",
@@ -135,7 +154,7 @@ export const analyzeEmotion = async (text: string) => {
     "no reason to live", "can't go on", "don't want to be here", "wish i were dead",
     "life isn't worth living", "give up on life", "i want to die", "i'm done with life"
   ];
-  const lowerText = text.toLowerCase();
+  const lowerText = sanitizedText.toLowerCase();
 
   if (distressPhrases.some(phrase => lowerText.includes(phrase))) {
     // Return special distress emotion
@@ -150,23 +169,32 @@ export const analyzeEmotion = async (text: string) => {
   }
 
   try {
-    console.log("[EmotionAnalysis] Sending request to BART-large-MNLI for Gen Z emotion detection");
+    console.log("[EmotionAnalysis] Sending request to NVIDIA NIM model for emotion detection");
     
-    // Prepare the request for BART-large-MNLI zero-shot classification
+    // Prepare the request for NVIDIA NIM model
     const requestBody = {
-      inputs: text,
-      parameters: {
-        candidate_labels: GENZ_EMOTION_CATEGORIES,
-        multi_label: false, // Get single best emotion
-        hypothesis_template: "This text expresses the emotion of {}." // Template for zero-shot classification
-      }
+      model: "meta/llama-3.1-8b-instruct",
+      messages: [
+        {
+          role: "system",
+          content: `You are an emotion detection AI. Analyze the user's text and classify it into one of these emotions: ${GENZ_EMOTION_CATEGORIES.join(", ")}. 
+          Return ONLY a JSON object with the format: {"emotion": "emotion_name", "confidence": 0.95, "top_emotions": [{"emotion": "emotion1", "confidence": 0.95}, ...]}`
+        },
+        {
+          role: "user", 
+          content: `Analyze this text for emotion: "${sanitizedText}"`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 300,
+      stream: false
     };
 
     const response = await fetch(EMOTION_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(HF_API_KEY ? { "Authorization": `Bearer ${HF_API_KEY}` } : {}),
+        "Authorization": `Bearer ${NIM_API_KEY}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -177,46 +205,54 @@ export const analyzeEmotion = async (text: string) => {
       const errorText = await response.text();
       console.error(`[EmotionAnalysis] API request failed with status: ${response.status}. Response: ${errorText}`);
       throw new Error(
-        `Emotion API error (status ${response.status}): ${errorText}.
-        ⚠️ Double check your Hugging Face API key and the facebook/bart-large-mnli model availability at https://huggingface.co/facebook/bart-large-mnli ⚠️`
+        `NVIDIA NIM API error (status ${response.status}): ${errorText}.
+        ⚠️ Double check your NVIDIA NIM API key and model availability ⚠️`
       );
     }
 
     const data = await response.json();
     console.log("[EmotionAnalysis] Raw API data:", data);
 
-    // The expected output from BART-large-MNLI is:
-    // {
-    //   "sequence": "input text",
-    //   "labels": ["emotion1", "emotion2", ...],
-    //   "scores": [0.95, 0.03, ...]
-    // }
-    if (data.labels && data.scores && Array.isArray(data.labels) && Array.isArray(data.scores)) {
-      // Get the top emotion
-      const topIndex = data.scores.indexOf(Math.max(...data.scores));
-      const topEmotion = data.labels[topIndex];
-      const topScore = data.scores[topIndex];
+    // Parse the response from the NIM model
+    const responseText = data.choices[0].message.content;
+    
+    try {
+      // Try to parse JSON response
+      const emotionData = JSON.parse(responseText);
+      
+      if (emotionData.emotion && emotionData.confidence) {
+        const topEmotion = emotionData.emotion;
+        const topScore = emotionData.confidence;
+        
+        console.log("Top emotion from NIM:", topEmotion, "with confidence:", topScore);
 
-      console.log("Top Gen Z emotion:", topEmotion, "with score:", topScore);
+        // Get top emotions for context
+        const topEmotions = emotionData.top_emotions || [{ label: topEmotion, score: topScore }];
 
-      // Get top 3 emotions for context
-      const topEmotions = data.labels
-        .map((label: string, index: number) => ({
-          label: label as EmotionType,
-          score: data.scores[index]
-        }))
-        .sort((a: any, b: any) => b.score - a.score)
-        .slice(0, 3);
-
-      return {
-        label: topEmotion as EmotionType,
-        score: topScore,
-        color: getEmotionColor(topEmotion as EmotionType),
-        emotions: topEmotions // Return top 3 emotions for reference
-      };
+        return {
+          label: topEmotion as EmotionType,
+          score: topScore,
+          color: getEmotionColor(topEmotion as EmotionType),
+          emotions: topEmotions.map((e: any) => ({ label: e.emotion || e.label, score: e.confidence || e.score }))
+        };
+      }
+    } catch (parseError) {
+      console.warn("Failed to parse JSON response, falling back to text analysis");
+      // Fallback: extract emotion from text response
+      const responseTextLower = responseText.toLowerCase();
+      for (const emotion of GENZ_EMOTION_CATEGORIES) {
+        if (responseTextLower.includes(emotion.toLowerCase())) {
+          return {
+            label: emotion as EmotionType,
+            score: 0.7, // Default confidence
+            color: getEmotionColor(emotion as EmotionType),
+            emotions: [{ label: emotion as EmotionType, score: 0.7 }]
+          };
+        }
+      }
     }
 
-    throw new Error("[EmotionAnalysis] Invalid response format from BART-large-MNLI API");
+    throw new Error("[EmotionAnalysis] Invalid response format from NVIDIA NIM API");
 
   } catch (error) {
     console.error("Error analyzing emotion:", error);
@@ -302,11 +338,17 @@ export const analyzeEmotion = async (text: string) => {
 // Enhanced N8N workflow trigger function
 export const triggerEmotionalResponseWorkflow = async (
   userMessage: string,
-  emotionResult: any,
+  emotionResult: EmotionResult,
   useGenZ: boolean = false,
   previousEmotion?: string,
-  conversationHistory: any[] = []
+  conversationHistory: ConversationMessage[] = []
 ) => {
+  // Check if N8N workflow URL is configured
+  if (!N8N_WORKFLOW_URL || N8N_WORKFLOW_URL.includes('ngrok-free.app')) {
+    console.warn("N8N workflow URL not properly configured, using local fallback");
+    throw new Error("N8N workflow URL not configured");
+  }
+
   try {
     const workflowPayload = {
       userMessage,
@@ -663,7 +705,7 @@ export const generateAICustomizedResponse = async (
   emotionResult: EmotionResult,
   useGenZ: boolean = false,
   previousEmotion?: string,
-  conversationHistory: any[] = []
+  conversationHistory: ConversationMessage[] = []
 ): Promise<string> => {
   try {
     // Create a detailed prompt for AI response generation
@@ -672,12 +714,12 @@ export const generateAICustomizedResponse = async (
     // Prefer Hugging Face for responses if key present, else OpenRouter
     const hfApiKey = (typeof window !== 'undefined' 
       ? localStorage.getItem('hf_api_key') 
-      : undefined) || (import.meta as any)?.env?.VITE_HF_API_KEY;
+      : undefined) || (import.meta as ImportMeta)?.env?.VITE_HF_API_KEY;
 
     if (hfApiKey) {
       const hfModel = (typeof window !== 'undefined'
         ? localStorage.getItem('hf_response_model')
-        : undefined) || (import.meta as any)?.env?.VITE_HF_RESPONSE_MODEL || 'CohereLabs/command-a-reasoning-08-2025';
+        : undefined) || (import.meta as ImportMeta)?.env?.VITE_HF_RESPONSE_MODEL || 'CohereLabs/command-a-reasoning-08-2025';
 
       const hfResp = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
         method: 'POST',
@@ -729,18 +771,18 @@ export const generateAICustomizedResponse = async (
 
     // OpenRouter path
     const apiKey = typeof window !== 'undefined' 
-      ? localStorage.getItem('openrouter_api_key') || (window as any).OPENROUTER_API_KEY
-      : (import.meta as any)?.env?.VITE_OPENROUTER_API_KEY;
+      ? localStorage.getItem('openrouter_api_key') || (window as Window & { OPENROUTER_API_KEY?: string }).OPENROUTER_API_KEY
+      : (import.meta as ImportMeta)?.env?.VITE_OPENROUTER_API_KEY;
     if (!apiKey) {
       throw new Error('OpenRouter API key not configured');
     }
     const configuredModel = (typeof window !== 'undefined' 
       ? localStorage.getItem('openrouter_model') 
       : undefined) 
-      || (import.meta as any)?.env?.VITE_OPENROUTER_MODEL 
+      || (import.meta as ImportMeta)?.env?.VITE_OPENROUTER_MODEL 
       || 'meta-llama/llama-3.1-70b-instruct:free';
 
-    const response = await fetch((import.meta as any)?.env?.VITE_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch((import.meta as ImportMeta)?.env?.VITE_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -820,13 +862,13 @@ const createAIPrompt = (
   emotionResult: EmotionResult,
   useGenZ: boolean,
   previousEmotion?: string,
-  conversationHistory: any[] = []
+  conversationHistory: ConversationMessage[] = []
 ): string => {
   const emotion = emotionResult.label;
   const score = emotionResult.score;
   const intensity = score > 0.8 ? 'high' : score < 0.4 ? 'low' : 'moderate';
   
-  let languageStyle = useGenZ 
+  const languageStyle = useGenZ 
     ? 'Use Gen Z language with modern slang, emojis, and casual expressions like "rn", "literally", "vibes", etc.'
     : 'Use traditional, supportive language with proper grammar and empathetic tone.';
 
@@ -835,7 +877,7 @@ const createAIPrompt = (
   
   // Add context about emotion transition if available
   const transitionContext = previousEmotion && previousEmotion !== emotion
-    ? `The user\'s emotion has changed from ${previousEmotion} to ${emotion}. `
+    ? `The user's emotion has changed from ${previousEmotion} to ${emotion}. `
     : '';
 
   // Add conversation history context
@@ -908,7 +950,7 @@ export const triggerAIEmotionalResponse = async (
   emotionResult: EmotionResult,
   useGenZ: boolean = false,
   previousEmotion?: string,
-  conversationHistory: any[] = []
+  conversationHistory: ConversationMessage[] = []
 ) => {
   try {
     // Try AI-generated response first

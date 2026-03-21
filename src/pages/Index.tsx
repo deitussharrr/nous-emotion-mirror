@@ -80,8 +80,11 @@ const Index: React.FC = () => {
   const handleAnalyzeEmotion = async (text: string, title?: string, messages?: ConversationMessage[]) => {
     setIsLoading(true);
     try {
+      // Get user identifier for rate limiting (use active note ID or generate one)
+      const userIdentifier = activeNoteId || 'anonymous';
+      
       // Analyze emotion directly from the model
-      const emotionResult = await analyzeEmotion(text);
+      const emotionResult = await analyzeEmotion(text, userIdentifier);
       
       // Save the raw emotion result
       setCurrentEmotion(emotionResult);
@@ -343,11 +346,7 @@ const Index: React.FC = () => {
                   previousEmotions={entries.slice(0, 3).map(entry => entry.emotion)}
                 />
               </div>
-              {false && (
-                <div className="lg:col-span-3 glass-card card-gradient rounded-lg p-4">
-                  <EmotionGraph emotionData={getEmotionData()} />
-                </div>
-              )}
+               {/* Emotion graph temporarily disabled */}
             </div>
           )}
           

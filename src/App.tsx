@@ -7,26 +7,42 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import React from "react";
 
-// Simple global error boundary
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }>{
+// Enhanced global error boundary
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: Error }>{
   constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false };
   }
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
-  componentDidCatch(error: unknown) {
-    console.error('App crashed with error:', error);
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('App crashed with error:', error, errorInfo);
+    // You could send this to an error reporting service here
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-6 text-center">
-          <div>
+        <div className="min-h-screen flex items-center justify-center p-6 text-center bg-nousBackground text-nousText-primary">
+          <div className="glass-card rounded-lg p-6 max-w-md">
             <h1 className="text-2xl font-semibold mb-2">Something went wrong</h1>
-            <p className="text-sm opacity-80 mb-4">Please refresh the page. If the problem persists, check the console.</p>
-            <a className="underline" href="/">Reload</a>
+            <p className="text-sm opacity-80 mb-4">
+              The application encountered an unexpected error. This has been logged.
+            </p>
+            <div className="space-y-2">
+              <button 
+                onClick={() => window.location.reload()} 
+                className="w-full bg-nousPrimary text-white px-4 py-2 rounded-md hover:bg-nousPrimary/90 transition-colors"
+              >
+                Reload Application
+              </button>
+              <button 
+                onClick={() => this.setState({ hasError: false })}
+                className="w-full bg-white/10 px-4 py-2 rounded-md hover:bg-white/20 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       );

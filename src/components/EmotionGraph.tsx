@@ -15,11 +15,17 @@ interface EmotionGraphProps {
   dayView?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+type TooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: { label: string; messageContent?: string } }>;
+  label?: string;
+};
+
+const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (active && payload && payload.length) {
     const emotion = payload[0].payload.label;
-    const time = format(new Date(label), 'p');
-    const date = format(new Date(label), 'PPP');
+    const time = format(new Date(label || 0), 'p');
+    const date = format(new Date(label || 0), 'PPP');
     const messageContent = payload[0].payload.messageContent;
     
     return (

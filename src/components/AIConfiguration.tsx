@@ -8,10 +8,10 @@ import { Brain, Key, Settings, CheckCircle, AlertCircle } from 'lucide-react';
 
 const AIConfiguration: React.FC = () => {
   const [openaiKey, setOpenaiKey] = useState<string>('');
-  const [model, setModel] = useState<string>(localStorage.getItem('openrouter_model') || (import.meta as any)?.env?.VITE_OPENROUTER_MODEL || 'mistralai/mistral-small-3.2-24b-instruct:free');
+  const [model, setModel] = useState<string>(localStorage.getItem('openrouter_model') || import.meta.env.VITE_OPENROUTER_MODEL || 'mistralai/mistral-small-3.2-24b-instruct:free');
   const [isConfigured, setIsConfigured] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [hfModel, setHfModel] = useState<string>(localStorage.getItem('hf_response_model') || (import.meta as any)?.env?.VITE_HF_RESPONSE_MODEL || 'CohereLabs/command-a-reasoning-08-2025');
+  const [hfModel, setHfModel] = useState<string>(localStorage.getItem('hf_response_model') || import.meta.env.VITE_HF_RESPONSE_MODEL || 'CohereLabs/command-a-reasoning-08-2025');
   const [hfKey, setHfKey] = useState<string>(localStorage.getItem('hf_api_key') || '');
 
   useEffect(() => {
@@ -48,7 +48,7 @@ const AIConfiguration: React.FC = () => {
         
         // Update environment variable for the session
         if (typeof window !== 'undefined') {
-          (window as any).OPENROUTER_API_KEY = openaiKey;
+          (window as Window & { OPENROUTER_API_KEY?: string }).OPENROUTER_API_KEY = openaiKey;
         }
         alert('OpenRouter API key saved locally for this browser.');
       } else {
@@ -68,7 +68,7 @@ const AIConfiguration: React.FC = () => {
     setIsConfigured(false);
     
     if (typeof window !== 'undefined') {
-      delete (window as any).OPENROUTER_API_KEY;
+      delete (window as Window & { OPENROUTER_API_KEY?: string }).OPENROUTER_API_KEY;
     }
   };
 

@@ -135,7 +135,7 @@ const ConversationSummary: React.FC<ConversationSummaryProps> = ({ entry, onDele
         
         <div className="space-y-3">
           <div className="flex flex-wrap gap-1">
-            {entry.emotion.emotions?.slice(0, 3).map((emotion: any, index: number) => (
+            {entry.emotion.emotions?.slice(0, 3).map((emotion: { label: string; score: number }, index: number) => (
               <span 
                 key={index} 
                 className="text-xs px-2 py-0.5 rounded-full bg-white/10"

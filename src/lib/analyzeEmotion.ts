@@ -1,6 +1,7 @@
 // src/lib/analyzeEmotion.ts
 import { EmotionType, EmotionResult } from "../types";
 import { checkRateLimit } from "./rateLimit";
+import { clampConfidence, containsCrisisLanguage, normalizeText } from "./emotionSafety";
 
 // Updated to use NVIDIA NIM models for emotion detection
 const EMOTION_API_URL = "https://integrate.api.nvidia.com/v1/models/meta/llama-3.1-8b-instruct/chat/completions";
@@ -129,7 +130,7 @@ export const getEmotionColor = (emotion: EmotionType | string): string => {
 };
 
 // Input sanitization function
-const sanitizeInput = (text: string): string => {
+export const sanitizeInput = (text: string): string => {
   // Remove potential script tags and malicious content
   return text
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -147,16 +148,8 @@ export const analyzeEmotion = async (text: string, userIdentifier?: string) => {
   // Sanitize input first
   const sanitizedText = sanitizeInput(text);
   
-  // --- 1. Explicit check for suicidal ideation / self-harm ---
-  const distressPhrases = [
-    "kill myself", "end my life", "suicide", "die by suicide",
-    "want to die", "don't want to live", "hurt myself", "self-harm", "cut myself", "take my own life",
-    "no reason to live", "can't go on", "don't want to be here", "wish i were dead",
-    "life isn't worth living", "give up on life", "i want to die", "i'm done with life"
-  ];
-  const lowerText = sanitizedText.toLowerCase();
-
-  if (distressPhrases.some(phrase => lowerText.includes(phrase))) {
+  // Crisis routing is deterministic and runs before any external model call.
+  if (containsCrisisLanguage(sanitizedText)) {
     // Return special distress emotion
     return {
       label: "distress",
@@ -220,9 +213,9 @@ export const analyzeEmotion = async (text: string, userIdentifier?: string) => {
       // Try to parse JSON response
       const emotionData = JSON.parse(responseText);
       
-      if (emotionData.emotion && emotionData.confidence) {
+      if (typeof emotionData.emotion === "string" && emotionData.confidence !== undefined) {
         const topEmotion = emotionData.emotion;
-        const topScore = emotionData.confidence;
+        const topScore = clampConfidence(emotionData.confidence);
         
         console.log("Top emotion from NIM:", topEmotion, "with confidence:", topScore);
 
@@ -233,7 +226,10 @@ export const analyzeEmotion = async (text: string, userIdentifier?: string) => {
           label: topEmotion as EmotionType,
           score: topScore,
           color: getEmotionColor(topEmotion as EmotionType),
-          emotions: topEmotions.map((e: any) => ({ label: e.emotion || e.label, score: e.confidence || e.score }))
+          emotions: topEmotions.map((e: { emotion?: string; label?: string; confidence?: number; score?: number }) => ({
+            label: e.emotion || e.label || topEmotion,
+            score: clampConfidence(e.confidence ?? e.score, topScore),
+          }))
         };
       }
     } catch (parseError) {
@@ -260,6 +256,7 @@ export const analyzeEmotion = async (text: string, userIdentifier?: string) => {
     // Fallback to Gen Z language pattern detection
     let fallbackEmotion: EmotionType = "mood";
     let fallbackScore = 0.5;
+    const lowerText = normalizeText(sanitizedText);
 
     // Gen Z positive expressions
     if (lowerText.includes("vibing") || lowerText.includes("bossed") || lowerText.includes("lit") || 

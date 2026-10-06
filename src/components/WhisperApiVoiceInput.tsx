@@ -57,8 +57,9 @@ const WhisperApiVoiceInput: React.FC<WhisperApiVoiceInputProps> = ({
           } else {
             toast({ title: "Transcription Error", description: "No text returned from API", variant: "destructive" });
           }
-        } catch (err: any) {
-          toast({ title: "Transcription Error", description: err.message || "Unknown error", variant: "destructive" });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unknown error";
+          toast({ title: "Transcription Error", description: message, variant: "destructive" });
         }
         setLoading(false);
       };
@@ -66,8 +67,9 @@ const WhisperApiVoiceInput: React.FC<WhisperApiVoiceInputProps> = ({
       recorder.start();
       setMediaRecorder(recorder);
       setRecording(true);
-    } catch (err: any) {
-      toast({ title: "Could not record audio", description: err.message || "Permission denied", variant: "destructive" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Permission denied";
+      toast({ title: "Could not record audio", description: message, variant: "destructive" });
     }
   };
 
@@ -101,4 +103,3 @@ const WhisperApiVoiceInput: React.FC<WhisperApiVoiceInputProps> = ({
 };
 
 export default WhisperApiVoiceInput;
-

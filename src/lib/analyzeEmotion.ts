@@ -5,6 +5,7 @@ import { clampConfidence, containsCrisisLanguage, normalizeText } from "./emotio
 
 // Updated to use NVIDIA NIM models for emotion detection
 const EMOTION_API_URL = "https://integrate.api.nvidia.com/v1/models/meta/llama-3.1-8b-instruct/chat/completions";
+const AI_PROXY_URL = import.meta.env.VITE_AI_PROXY_URL;
 // NVIDIA NIM API key should come from env or localStorage
 const NIM_API_KEY =
   (typeof window !== 'undefined' ? localStorage.getItem('nim_api_key') : undefined) ||
@@ -183,13 +184,13 @@ export const analyzeEmotion = async (text: string, userIdentifier?: string) => {
       stream: false
     };
 
-    const response = await fetch(EMOTION_API_URL, {
+    const response = await fetch(AI_PROXY_URL || EMOTION_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${NIM_API_KEY}`,
+        ...(AI_PROXY_URL || !NIM_API_KEY ? {} : { Authorization: `Bearer ${NIM_API_KEY}` }),
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(AI_PROXY_URL ? { provider: "nvidia", request: requestBody } : requestBody),
     });
 
     console.log("[EmotionAnalysis] API Response status:", response.status);
@@ -713,18 +714,30 @@ export const generateAICustomizedResponse = async (
       ? localStorage.getItem('hf_api_key') 
       : undefined) || (import.meta as ImportMeta)?.env?.VITE_HF_API_KEY;
 
-    if (hfApiKey) {
+    if (hfApiKey || AI_PROXY_URL) {
       const hfModel = (typeof window !== 'undefined'
         ? localStorage.getItem('hf_response_model')
         : undefined) || (import.meta as ImportMeta)?.env?.VITE_HF_RESPONSE_MODEL || 'CohereLabs/command-a-reasoning-08-2025';
 
-      const hfResp = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+      const hfResp = await fetch(AI_PROXY_URL || `https://api-inference.huggingface.co/models/${hfModel}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${hfApiKey}`,
+          ...(AI_PROXY_URL || !hfApiKey ? {} : { Authorization: `Bearer ${hfApiKey}` }),
         },
-        body: JSON.stringify({
+        body: JSON.stringify(AI_PROXY_URL ? {
+          provider: "huggingface",
+          model: hfModel,
+          request: {
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 220,
+            temperature: 0.9,
+            do_sample: true,
+            return_full_text: false
+          }
+          }
+        } : {
           inputs: prompt,
           parameters: {
             max_new_tokens: 220,
@@ -770,7 +783,7 @@ export const generateAICustomizedResponse = async (
     const apiKey = typeof window !== 'undefined' 
       ? localStorage.getItem('openrouter_api_key') || (window as Window & { OPENROUTER_API_KEY?: string }).OPENROUTER_API_KEY
       : (import.meta as ImportMeta)?.env?.VITE_OPENROUTER_API_KEY;
-    if (!apiKey) {
+    if (!apiKey && !AI_PROXY_URL) {
       throw new Error('OpenRouter API key not configured');
     }
     const configuredModel = (typeof window !== 'undefined' 
@@ -779,15 +792,28 @@ export const generateAICustomizedResponse = async (
       || (import.meta as ImportMeta)?.env?.VITE_OPENROUTER_MODEL 
       || 'meta-llama/llama-3.1-70b-instruct:free';
 
-    const response = await fetch((import.meta as ImportMeta)?.env?.VITE_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(AI_PROXY_URL || (import.meta as ImportMeta)?.env?.VITE_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        ...(AI_PROXY_URL || !apiKey ? {} : { Authorization: `Bearer ${apiKey}` }),
         'HTTP-Referer': window?.location?.origin || 'http://localhost:3000',
         'X-Title': 'Nous Emotion Mirror'
       },
-      body: JSON.stringify({
+      body: JSON.stringify(AI_PROXY_URL ? {
+        provider: "openrouter",
+        request: {
+        model: configuredModel,
+        messages: [
+          { role: 'system', content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 200,
+        temperature: 0.9,
+        presence_penalty: 0.6,
+        frequency_penalty: 0.8
+        }
+      } : {
         model: configuredModel,
         messages: [
           { role: 'system', content: 'You are an empathetic AI companion that creates completely unique, fresh responses every time. Never repeat the same phrases or use template-like language. Each response should feel like a real person having a genuine conversation. Be creative, varied, and authentic in your language. Avoid repetitive patterns and make every response feel one-of-a-kind.' },

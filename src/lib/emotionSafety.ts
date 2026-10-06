@@ -22,6 +22,8 @@ const CRISIS_PHRASES = [
 export const normalizeText = (text: string): string =>
   text
     .normalize("NFKC")
+    .replace(/[\u2018\u2019\u201A\uFF07]/g, "'")
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();

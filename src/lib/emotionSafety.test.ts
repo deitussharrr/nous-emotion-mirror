@@ -7,11 +7,12 @@ import {
 
 describe("emotion safety utilities", () => {
   it("normalizes unicode and repeated whitespace", () => {
-    expect(normalizeText("  I\u2019m   overwhelmed  ")).toBe("i’m overwhelmed");
+    expect(normalizeText("  I\u2019m   overwhelmed  ")).toBe("i'm overwhelmed");
   });
 
   it("detects explicit crisis language before model inference", () => {
     expect(containsCrisisLanguage("I don't want to live anymore")).toBe(true);
+    expect(containsCrisisLanguage("I don’t want to live anymore")).toBe(true);
     expect(containsCrisisLanguage("I had a difficult day")).toBe(false);
   });
 
